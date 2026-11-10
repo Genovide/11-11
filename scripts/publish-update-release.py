@@ -1,8 +1,8 @@
-"""Replace the two tested v1.2.2 updates, retaining old assets until verification."""
+"""Replace the two tested v1.2.3 updates, retaining old assets until verification."""
 import hashlib,json,os,pathlib,time,urllib.parse,urllib.request
 
 REPO='Genovide/SoundSync'
-TAG='v1.2.2'
+TAG='v1.2.3'
 API='https://api.github.com/repos/'+REPO
 TOKEN=os.environ['GH_TOKEN']
 
@@ -17,7 +17,7 @@ def request(method,url,data=None,content_type='application/json'):
 
 def main():
     dist=pathlib.Path('dist')
-    names=['SoundSync-1.2.2-Update-Windows-x64.zip','SoundSync-1.2.2-Update-macOS-arm64.zip']
+    names=['SoundSync-1.2.3-Update-Windows-x64.zip','SoundSync-1.2.3-Update-macOS-arm64.zip']
     files={name:(dist/name).read_bytes() for name in names}
     sums=''.join(hashlib.sha256(files[name]).hexdigest()+'  '+name+'\n' for name in names)
     (dist/'SHA256SUMS.txt').write_text(sums,encoding='utf-8',newline='\n')
@@ -62,7 +62,7 @@ def main():
 - Отдельные пакеты для Windows x64 и Mac Apple Silicon arm64. Windows-модули не попадают в Mac-архив.
 - Оба пакета проверены на соответствующих ОС: повторная установка, восстановление основы, сохранение данных; на Mac также запуск приложения и проверка подписи.
 
-Файлы релиза заменены, версия осталась **1.2.2**. Если старый апдейт уже был установлен, скачай обновлённый ZIP и запусти его повторно. Контрольные суммы обновлены в `SHA256SUMS.txt`.
+Файлы релиза заменены, версия осталась **1.2.3**. Если старый апдейт уже был установлен, скачай обновлённый ZIP и запусти его повторно. Контрольные суммы обновлены в `SHA256SUMS.txt`.
 
 '''
     body=release.get('body','')
@@ -77,7 +77,7 @@ def main():
 - Очередь, редактирование текста и синхронизация остаются доступны. AI-описание свёрнуто в компактный раскрываемый блок.
 - Интерфейс проверен в Electron на Windows и Mac Apple Silicon, включая короткое окно, обе темы и управление с клавиатуры.
 
-Скачай обновлённый ZIP своей платформы и установи поверх текущей версии. Номер релиза остался **1.2.2**.
+Скачай обновлённый ZIP своей платформы и установи поверх текущей версии. Номер релиза остался **1.2.3**.
 
 '''
     if '## Обновлённый интерфейс и общий экран трека' not in body:

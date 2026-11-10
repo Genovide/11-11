@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import {execFileSync} from 'node:child_process';
 import {stageWindowsRepair} from './stage-windows-repair.mjs';
 
-const version='1.2.2';
+const version=JSON.parse(fs.readFileSync('app/package.json','utf8')).version;
 const python=process.env.SOUNDSYNC_PYTHON||'python3';
 const selected=process.env.SOUNDSYNC_UPDATE_PLATFORM;
 if(selected&&!['Windows','macOS'].includes(selected))throw Error('Unknown update platform');
