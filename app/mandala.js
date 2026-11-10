@@ -75,8 +75,11 @@
    this.mode.draw(audio,cfg,this.time);this.bloom.apply(this.source,Math.min(1,cfg.bloom*.5),.9);
    // Mirror the same angular sampling used by SoundVisualizer's kaleido shader.
    ctx.save();ctx.setTransform(1,0,0,1,0,0);
-   const wash=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.max(w,h)*.6);
-   wash.addColorStop(0,'rgba(43,0,85,.3)');wash.addColorStop(1,'rgba(8,8,15,0)');ctx.fillStyle=wash;ctx.fillRect(0,0,w,h);
+   if(!document.body.classList.contains('flat-theme')){
+    const color=[1,3,5].map(i=>parseInt(cfg.colors[0].slice(i,i+2),16));
+    const wash=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.max(w,h)*.6);
+    wash.addColorStop(0,`rgba(${color},.12)`);wash.addColorStop(1,`rgba(${color},0)`);ctx.fillStyle=wash;ctx.fillRect(0,0,w,h);
+   }
    ctx.translate(w/2,h/2);ctx.globalAlpha=intensity;
    const half=Math.PI/cfg.slices,r=Math.hypot(w,h);
    for(let i=0;i<cfg.slices*2;i++){

@@ -8,7 +8,9 @@
     "test:source": "node scripts/check-source.cjs",
     "test:mac": "node scripts/smoke-macos.mjs",
     "archive:mac": "node scripts/archive-macos.mjs",
-    "build:windows": "node scripts/build-windows.mjs"
+    "build:windows": "node scripts/build-windows.mjs",
+    "test:palette": "node scripts/test-cover-palette.cjs",
+    "test:interface": "node scripts/run-interface-test.mjs"
   },
   "devDependencies": {
     "@electron/packager": "^18.3.6",

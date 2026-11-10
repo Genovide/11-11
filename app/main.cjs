@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,dialog,protocol,net,safeStorage}=require('electron');app.setPath('userData',require('./platform-config.cjs').userDataPath({exe:app.getPath('exe'),appData:app.getPath('appData')}));if(process.env.SOUNDSYNC_SMOKE_DIR)app.setPath('userData',require('node:path').resolve(process.env.SOUNDSYNC_SMOKE_DIR));app.setName('SoundSync');if(process.platform==='win32')app.setAppUserModelId('SoundSync.Player');
+const {app,BrowserWindow,ipcMain,dialog,protocol,net,safeStorage}=require('electron');app.setPath('userData',require('./platform-config.cjs').userDataPath({exe:app.getPath('exe'),appData:app.getPath('appData')}));const testProfile=process.env.SOUNDSYNC_SMOKE_DIR||process.env.SOUNDSYNC_UI_TEST_DIR;if(testProfile)app.setPath('userData',require('node:path').resolve(testProfile));app.setName('SoundSync');if(process.platform==='win32')app.setAppUserModelId('SoundSync.Player');
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
 const {pathToFileURL}=require('node:url');
 let quitting=false;const rendererErrors=[];
@@ -58,7 +58,7 @@ app.whenReady().then(async()=>{
  ipcMain.handle('choose-folder',async()=>{const result=await dialog.showOpenDialog(win,{properties:['openDirectory'],title:'Где лежит твоя музыка?'});if(result.canceled)return null;return scan(result.filePaths[0])});
  ipcMain.handle('rescan',()=>scan(library.folder||''));
  ipcMain.handle('window',(_,action)=>{if(action==='minimize')win.minimize();if(action==='maximize')win.isMaximized()?win.unmaximize():win.maximize();if(action==='close')win.close()});
- win=new BrowserWindow({width:1440,height:940,minWidth:1000,minHeight:720,frame:process.platform==='darwin',backgroundColor:'#090c12',icon:path.join(__dirname,process.platform==='darwin'?'icon.png':'icon.ico'),show:false,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+ win=new BrowserWindow({width:1440,height:940,minWidth:1000,minHeight:720,frame:process.platform==='darwin',backgroundColor:'#090c12',icon:path.join(__dirname,process.platform==='darwin'?'icon.png':'icon.ico'),show:false,webPreferences:{preload:path.join(__dirname,'preload.cjs'),backgroundThrottling:!process.env.SOUNDSYNC_UI_TEST_DIR,contextIsolation:true,nodeIntegration:false,sandbox:true}});
  if(smoke)win.webContents.on('console-message',(...args)=>fs.appendFile(path.resolve(__dirname,'../../../../work/renderer-log.txt'),JSON.stringify(args.slice(1))+'\n').catch(()=>{}));
  if(smoke)await fs.appendFile(path.resolve(__dirname,'../../../../work/main-started.txt'),'\nwindow');
  win.webContents.on('console-message',(event,level,message,line,sourceId)=>{const detail=typeof event?.message==='string'?event:{level,message,lineNumber:line,sourceId};if(detail.level==='error'||detail.level>=3){rendererErrors.push({message:detail.message,source:detail.sourceId,line:detail.lineNumber});startupLog('Console: '+detail.message)}});
@@ -66,7 +66,7 @@ app.whenReady().then(async()=>{
  win.webContents.on('preload-error',(_e,_preload,error)=>{rendererErrors.push(error.message);startupLog('Preload: '+error.stack)});
  if(process.platform==='darwin')win.on('close',event=>{if(!quitting){event.preventDefault();win.hide()}});
  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());
- if(smoke)win.webContents.setBackgroundThrottling(false);await win.loadFile('index.html');win.show();
+ if(smoke)win.webContents.setBackgroundThrottling(false);await win.loadFile('index.html');if(!process.env.SOUNDSYNC_UI_TEST_DIR)win.show();
  if(process.env.SOUNDSYNC_SMOKE_DIR){await new Promise(resolve=>setTimeout(resolve,1500));const state=await win.webContents.executeJavaScript("({title:document.title,brand:document.querySelector('.brand-name')?.textContent,sorting:!!document.querySelector('#library-sort'),metadata:!!window.TrackIdentity,reviews:!!window.RztData,platform:navigator.platform,bridge:typeof window.lumen,navs:[...document.querySelectorAll('[data-view]')].map(e=>e.dataset.view),controls:getComputedStyle(document.querySelector('.window-actions')).display})");await fs.writeFile(path.join(app.getPath('userData'),'smoke-report.json'),JSON.stringify({state,rendererErrors,versions:process.versions,arch:process.arch,platform:process.platform,runtime:require('./runtime-paths.cjs').python},null,2));await fs.writeFile(path.join(app.getPath('userData'),'startup.png'),(await win.webContents.capturePage()).toPNG());app.quit();}
 
 }).catch(startupFailure);

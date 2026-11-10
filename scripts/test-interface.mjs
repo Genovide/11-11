@@ -1,0 +1,64 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const port=process.env.SOUNDSYNC_TEST_PORT||'9227';
+const output=path.resolve(process.env.SOUNDSYNC_SCREENSHOTS||'work/ui-screenshots');fs.mkdirSync(output,{recursive:true});
+const pages=await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+const page=pages.find(p=>p.type==='page');assert.ok(page,'Renderer is available');
+const socket=new WebSocket(page.webSocketDebuggerUrl);await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject});
+let id=0;const pending=new Map(),errors=[],checks=[];
+socket.onmessage=event=>{const message=JSON.parse(event.data);if(message.id){const request=pending.get(message.id);pending.delete(message.id);message.error?request.reject(Error(JSON.stringify(message.error))):request.resolve(message.result)}else if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails)};
+const call=(method,params={})=>new Promise((resolve,reject)=>{pending.set(++id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))});
+async function evaluate(expression){const result=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true,userGesture:true});if(result.exceptionDetails)throw Error(JSON.stringify(result.exceptionDetails));return result.result.value}
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function check(name,expression){const actual=await evaluate(expression);assert.equal(actual,true,name+': '+JSON.stringify(actual));checks.push(name)}
+async function screenshot(name){const {data}=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(path.join(output,name+'.png'),Buffer.from(data,'base64'))}
+try {
+ await call('Runtime.enable');await call('Page.enable');await call('Emulation.setFocusEmulationEnabled',{enabled:true});
+ await call('Emulation.setDeviceMetricsOverride',{width:1600,height:980,deviceScaleFactor:1,mobile:false});
+ await evaluate(`Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});localStorage.setItem('volume','0');audio.volume=0;audio.muted=true;$('volume').value='0';$('volume').dispatchEvent(new Event('input'));document.querySelector('.home-nav').click();setFlatTheme(true);playList(library.tracks,0);getComputedStyle(document.querySelector('.now-panel')).backgroundColor`);
+ await pause(1700);
+ await check('Playback and cover loaded',`!audio.paused&&audio.currentTime>0&&$('now-cover').querySelector('img').naturalWidth>0`);
+ await check('Flat shell surfaces are neutral',`[document.body,document.querySelector('.titlebar'),document.querySelector('.sidebar'),document.querySelector('main'),document.querySelector('.now-panel'),document.querySelector('.player'),document.querySelector('.hero')].every(e=>{const g=document.createElement('canvas').getContext('2d');g.fillStyle=getComputedStyle(e).backgroundColor;g.fillRect(0,0,1,1);const c=[...g.getImageData(0,0,1,1).data].slice(0,3);return Math.max(...c)-Math.min(...c)<=3})`);
+ await check('Flat hero has no gradient',`getComputedStyle(document.querySelector('.hero')).backgroundImage==='none'`);
+ await check('Back icon is centered',`(()=>{const a=document.querySelector('.dashboard-back').getBoundingClientRect(),b=document.querySelector('.dashboard-back svg').getBoundingClientRect();return Math.abs(a.x+a.width/2-b.x-b.width/2)<1&&Math.abs(a.y+a.height/2-b.y-b.height/2)<1})()`);
+ await check('Lyric action buttons have equal height',`Math.abs(editLyrics.getBoundingClientRect().height-alignButton.getBoundingClientRect().height)<1`);
+ await screenshot('flat-home');
+ await evaluate(`$('mini-cover').click()`);await pause(1000);
+ await check('Visualization opens first',`listeningView==='visual'&&showVisual.getAttribute('aria-selected')==='true'&&!immersive.classList.contains('hidden')&&!visualPanel.classList.contains('hidden')`);
+ await check('Visual controls fit the header',`[closeImmersive,viewSwitch,listeningControls].every(e=>{const r=e.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.height>0})`);
+ await check('Cover and canvas do not overlap',`immersiveArt.getBoundingClientRect().right<visualCanvas.getBoundingClientRect().left`);
+ await check('Visualization renders',`visualPaints>0&&visualCanvas.width>0`);
+ await screenshot('flat-visual');
+ const before=await evaluate('audio.currentTime');
+ await evaluate('showLyrics.click()');await pause(350);
+ await check('Lyrics switch preserves playback and the same nodes',`!audio.paused&&audio.currentTime>=${before}&&listeningView==='lyrics'&&$('lyrics')===lyricBox&&$('lyrics').closest('#listening-lyrics')===listeningLyrics&&immersive.querySelectorAll('#lyrics').length===1`);
+ await check('Full lyrics use the shared screen',`document.body.classList.contains('track-focus')&&showLyrics.getAttribute('aria-selected')==='true'&&visualPanel.classList.contains('hidden')&&!listeningLyrics.classList.contains('hidden')`);
+ await screenshot('flat-lyrics');
+ await evaluate(`$('queue-tab').click()`);await check('Queue remains available',`!$('queue').classList.contains('hidden')&&$('lyrics').classList.contains('hidden')`);
+ await evaluate(`$('lyrics-tab').click();showVisual.click();showLyrics.focus();showLyrics.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}))`);
+ await check('Switch supports keyboard navigation',`document.activeElement===showVisual&&listeningView==='visual'`);
+ await evaluate(`exitImmersive()`);
+ await check('Closing restores sidebar nodes and controls',`$('lyrics').closest('.now-panel')!==null&&alignmentTools.closest('.now-details')!==null&&!document.body.classList.contains('track-focus')&&listeningHomes.size===0`);
+ await evaluate(`setFlatTheme(false);applyCoverPalette([[180,52,58],[90,40,69],[210,130,80]]);getComputedStyle(document.documentElement).getPropertyValue('--cover-primary')`);await pause(1300);
+ await screenshot('gradient-warm-home');
+ const warm=await evaluate(`getComputedStyle(document.querySelector('main')).backgroundColor`);
+ await evaluate(`applyCoverPalette([[35,102,180],[30,70,120],[75,160,170]]);getComputedStyle(document.documentElement).getPropertyValue('--cover-primary')`);await pause(1300);
+ await screenshot('gradient-home');
+ await check('Gradient shell follows a different cover palette',`getComputedStyle(document.querySelector('main')).backgroundColor!==${JSON.stringify(warm)}&&getComputedStyle(document.querySelector('.player')).backgroundColor!==getComputedStyle(document.querySelector('main')).backgroundColor`);
+ await screenshot('gradient-home');
+ await evaluate(`openImmersive()`);await pause(900);await screenshot('gradient-visual');
+ await evaluate(`showLyrics.click()`);await pause(250);await screenshot('gradient-lyrics');
+ await call('Emulation.setDeviceMetricsOverride',{width:1000,height:720,deviceScaleFactor:1,mobile:false});await pause(400);
+ await check('Compact lyrics stay above the player',`listeningLyrics.getBoundingClientRect().bottom<=document.querySelector('.player').getBoundingClientRect().top+1&&immersiveInfo.scrollWidth<=immersiveInfo.clientWidth+2`);
+ await screenshot('compact-lyrics');
+ await evaluate(`showVisual.click()`);await pause(500);
+ await check('Compact visualization has no overlapping controls',`(()=>{const a=viewSwitch.getBoundingClientRect(),b=listeningControls.getBoundingClientRect();return b.top>=a.bottom-1&&b.right<=innerWidth})()`);
+ await screenshot('compact-visual');
+ await evaluate(`showLyrics.click();exitImmersive();openImmersive()`);
+ await check('Reopening always starts with visualization',`listeningView==='visual'&&showVisual.getAttribute('aria-selected')==='true'`);
+ await evaluate(`exitImmersive();setPalette({...current,cover:''})`);
+ await check('Missing cover clears the previous album palette',`JSON.stringify(targetPalette)===JSON.stringify(CoverPalette.fallback)`);
+ assert.equal(errors.length,0,'No renderer exceptions');checks.push('No renderer exceptions');
+ fs.writeFileSync(path.join(output,'report.json'),JSON.stringify({ok:true,checks},null,2));console.log(JSON.stringify({ok:true,checks},null,2));
+} finally {socket.close()}

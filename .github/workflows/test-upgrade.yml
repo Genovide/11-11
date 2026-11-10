@@ -56,10 +56,25 @@ jobs:
       - name: Replace incompatible base from a verified local archive
         shell: powershell
         run: ./scripts/test-upgrade-windows.ps1 -Root work/base/SoundSync -Patch work/patch -BaseArchive base.zip
+      - name: Check palette and native Windows listening interface
+        shell: powershell
+        env:
+          SOUNDSYNC_TEST_APP: work/base/SoundSync/SoundSync.exe
+          SOUNDSYNC_SCREENSHOTS: dist/diagnostics/ui
+        run: |
+          node scripts/test-cover-palette.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node scripts/run-interface-test.mjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
           name: verified-Windows-update
           path: dist/SoundSync-1.2.2-Update-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Windows-interface-diagnostics
+          path: dist/diagnostics/ui/
   macos:
     runs-on: macos-15
     timeout-minutes: 30
@@ -104,6 +119,13 @@ jobs:
           test ! -d "$LEGACY"
           mv .build/legacy/SoundSync.app dist/SoundSync-darwin-arm64/SoundSync.app
           node scripts/smoke-macos.mjs
+      - name: Check palette and native Mac listening interface
+        env:
+          SOUNDSYNC_TEST_APP: dist/SoundSync-darwin-arm64/SoundSync.app/Contents/MacOS/SoundSync
+          SOUNDSYNC_SCREENSHOTS: dist/diagnostics/ui
+        run: |
+          node scripts/test-cover-palette.cjs
+          node scripts/run-interface-test.mjs
       - uses: actions/upload-artifact@v4
         with:
           name: verified-macOS-update

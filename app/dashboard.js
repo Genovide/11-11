@@ -36,7 +36,7 @@ const prior=render;render=function(){prior();document.body.classList.toggle('das
 homeNav.onclick=()=>{refreshRandom();albumSource='';home=true;selectedArtist=null;albumFilter=null;view='tracks';$('search').value='';render();main.scrollTo({top:0,behavior:'smooth'})};
 nav.addEventListener('click',e=>{if(e.target.closest('[data-view]'))leave()},true);
 $('search').addEventListener('input',()=>{if($('search').value.trim()){leave();render()}});
-const back=node('button','dashboard-back','‹');back.title='Назад';back.setAttribute('aria-label','Назад');back.onclick=()=>{leave();navigateBack();render()};document.querySelector('.topline').prepend(back);
+const back=node('button','dashboard-back');back.append(icon('back'));back.title='Назад';back.setAttribute('aria-label','Назад');back.onclick=()=>{leave();navigateBack();render()};document.querySelector('.topline').prepend(back);
 const oldOpenArtist=openArtist;openArtist=function(name){leave();oldOpenArtist(name)};
 render();
 })();

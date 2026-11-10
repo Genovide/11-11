@@ -15,7 +15,7 @@
     for(let i=0;i<count;i++){const lo=Math.max(1,Math.floor(min*Math.pow(max/min,i/count)*fftSize/sampleRate)),hi=Math.min(freq?.length||0,Math.max(lo+1,Math.ceil(min*Math.pow(max/min,(i+1)/count)*fftSize/sampleRate)));let power=0,n=0;for(let j=lo;j<hi;j++){power+=Math.pow(freq[j]/255,3);n++}const value=moving&&n?Math.min(1,Math.sqrt(power/n)*gain):0;bars[i]+=(value-bars[i])*(1-Math.exp(-Math.min(80,dt)/(value>bars[i]?90:260)))}return bars;
    }};
    ctx.save();ctx.setTransform(1,0,0,1,0,0);
-   this.backgrounds[key].draw(ctx,audio,cfg,this.time,w,h,moving?Math.min(80,dt)/1000:1e-9);
+   if(!document.body.classList.contains('flat-theme'))this.backgrounds[key].draw(ctx,audio,cfg,this.time,w,h,moving?Math.min(80,dt)/1000:1e-9);
    ctx.fillStyle=key==='centerbars'?'rgba(0,0,0,.65)':'rgba(0,0,0,.22)';ctx.fillRect(0,0,w,h);
    const mode=this.modes[key];const oldRot=mode.rot;if(key!=='flowfield'||moving||!this.frames[key])mode.draw(audio,cfg,this.time, moving?Math.min(80,dt)/1000:1e-9);if(!moving&&oldRot!==undefined)mode.rot=oldRot;
    const bloom=cfg.postfx.find(f=>f.type==='bloom'&&f.enabled);if(bloom)this.glow.apply(this.canvas,Math.min(1,(bloom.params.intensity||1)*.5),.9);
