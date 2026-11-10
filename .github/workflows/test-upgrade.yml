@@ -1,0 +1,57 @@
+name: Test cumulative SoundSync upgrade
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  upgrade:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build cumulative update packages
+        env:
+          SOUNDSYNC_PYTHON: python3
+        run: node scripts/build-upgrades.mjs
+      - name: Prepare verified base
+        run: |
+          test "$(uname -m)" = arm64
+          curl --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip
+          echo 'e9af35535b3fef181ae8af9ba3419cdd37eda49b1d8b7877eddb55c308468867  base.zip' | shasum -a 256 -c -
+          mkdir -p dist/SoundSync-darwin-arm64
+          ditto -x -k base.zip dist/SoundSync-darwin-arm64
+          ditto -x -k dist/SoundSync-1.2.2-Update-macOS-arm64.zip patch
+          bash -n patch/Update-SoundSync.command
+      - name: Update existing SoundSync without replacing compatible runtime
+        run: |
+          bash patch/Update-SoundSync.command "$PWD/dist/SoundSync-darwin-arm64/SoundSync.app" | tee modern-update.log
+          if grep -q 'Основа прежней версии' modern-update.log; then echo 'Unexpected runtime download'; exit 1; fi
+          node scripts/smoke-macos.mjs
+          mkdir -p "$RUNNER_TEMP/modern-tested"
+          mv dist/SoundSync-darwin-arm64/SoundSync.app "$RUNNER_TEMP/modern-tested/"
+      - name: Upgrade legacy app and migrate portable data
+        run: |
+          LEGACY="$PWD/.build/legacy/11-11.app"
+          mkdir -p "$LEGACY/Contents/MacOS/Data"
+          /usr/libexec/PlistBuddy -c 'Add CFBundleIdentifier string com.eleveneleven.player' "$LEGACY/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Add CFBundleShortVersionString string 1.1.0' "$LEGACY/Contents/Info.plist"
+          LEGACY="$LEGACY" python3 -c 'import os,pathlib,json;p=pathlib.Path(os.environ["LEGACY"])/"Contents/MacOS/Data";(p/"library.json").write_text(json.dumps({"folder":str(p/"downloads"),"tracks":[],"marker":"legacy-data-preserved"}));(p/"history-marker.txt").write_text("keep")'
+          HOME="$RUNNER_TEMP/legacy-home" bash patch/Update-SoundSync.command "$LEGACY" "$PWD/base.zip"
+          PROFILE="$RUNNER_TEMP/legacy-home/Library/Application Support/SoundSync" python3 -c 'import os,pathlib,json;p=pathlib.Path(os.environ["PROFILE"]);v=json.loads((p/"library.json").read_text());assert v["marker"]=="legacy-data-preserved";assert v["folder"]==str(p/"downloads");assert(p/"history-marker.txt").read_text()=="keep"'
+          test ! -d "$LEGACY"
+          test -d .build/legacy/SoundSync.app
+          mv .build/legacy/SoundSync.app dist/SoundSync-darwin-arm64/SoundSync.app
+          node scripts/smoke-macos.mjs
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' dist/SoundSync-darwin-arm64/SoundSync.app/Contents/Info.plist)" = 1.2.2
+      - name: Upload verified cumulative Mac update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload v1.2.2 dist/SoundSync-1.2.2-Update-macOS-arm64.zip --repo "$GITHUB_REPOSITORY" --clobber
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SoundSync-1.2.2-upgrade-diagnostics
+          path: dist/diagnostics/

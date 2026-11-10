@@ -23,10 +23,10 @@
 
 | Система | Полная версия | Обновление |
 |---|---|---|
-| Windows x64 | [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.1/SoundSync-1.2.1-Update-Windows-x64.zip) |
-| macOS 14+, Apple Silicon | [DMG](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.dmg) · [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.1/SoundSync-1.2.1-Update-macOS-arm64.zip) |
+| Windows x64 | [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.2/SoundSync-1.2.2-Update-Windows-x64.zip) |
+| macOS 14+, Apple Silicon | [DMG](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.dmg) · [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.2/SoundSync-1.2.2-Update-macOS-arm64.zip) |
 
-Актуальное обновление **1.2.1** устанавливается поверх полной версии **1.2.0**.
+Актуальный апдейт **1.2.2** — накопительный: подходит и для прежнего названия плеера. Промежуточные версии не нужны; несовместимые или недостающие компоненты загружаются автоматически с проверкой SHA-256.
 
 Полные версии включают Python, FFmpeg и модель синхронизации. Пользовательской музыки, настроек, истории и ключей в них нет. Контрольные суммы — в `SHA256SUMS.txt` в релизе.
 
@@ -42,7 +42,7 @@
 
 Mac-сборка тестовая: она имеет ad-hoc подпись, но не нотарифицирована Apple. Gatekeeper может ограничивать открытие. Защиту системы отключать не нужно; для обычного публичного распространения без этих ограничений требуется Developer ID и нотариализация.
 
-Update ZIP 1.2.1 рассчитан на установленную `SoundSync.app` 1.2.0. Обновляется интерфейс; встроенные Python и модель сохраняются. Локальная ad-hoc подпись восстанавливается системным codesign. Закрой приложение через меню SoundSync и запусти `Update-SoundSync.command`. При переходе со старой неработающей Mac-сборки используй полную версию.
+Update ZIP 1.2.2 обновляет установленную версию, включая прежнюю portable-сборку. Совместимая основа сохраняется; недостающая загружается автоматически. Приложение становится `SoundSync.app`; локальная ad-hoc подпись восстанавливается системным codesign. Закрой приложение через меню SoundSync и запусти `Update-SoundSync.command`. Данные прежней portable-сборки копируются в `Application Support/SoundSync`, если профиля SoundSync ещё нет. Существующий профиль не заменяется. Для устаревшей основы нужен интернет и место для резервной копии.
 
 ## Примечания
 

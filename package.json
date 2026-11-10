@@ -1,7 +1,7 @@
 {
   "name": "soundsync-build",
   "private": true,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "SoundSync desktop player — Windows and macOS builds",
   "scripts": {
     "build:mac": "node scripts/build-macos.mjs",
