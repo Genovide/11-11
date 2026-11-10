@@ -32,7 +32,7 @@ for e in entries:
   if hashlib.file_digest(f,'sha256').hexdigest()!=e['sha256']:sys.exit(1)
 sys.exit(0)
 '@
-  try{& $python -I -S -c $check $Root (Join-Path $PSScriptRoot 'base.json');$compatible=$LASTEXITCODE -eq 0}catch{$compatible=$false}
+  try{& $python -I -S -B -c $check $Root (Join-Path $PSScriptRoot 'base.json');$compatible=$LASTEXITCODE -eq 0}catch{$compatible=$false}
  }
 }
 $exe=Join-Path $Root 'SoundSync.exe'

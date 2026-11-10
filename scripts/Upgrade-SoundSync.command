@@ -52,7 +52,7 @@ if [ ! -e "$PROFILE" ]; then
     if [ -f "$prior/library.json" ] || [ -d "$prior/Local Storage" ]; then
       ditto "$prior" "$WORK/profile"
       # Portable libraries can contain absolute paths into their old Data folder.
-      "$WORK/SoundSync.app/Contents/Resources/alignment/runtime/bin/python3.12" -I -S -c '
+      "$WORK/SoundSync.app/Contents/Resources/alignment/runtime/bin/python3.12" -I -S -B -c '
 import json,pathlib,sys
 root=pathlib.Path(sys.argv[1]);old=sys.argv[2].rstrip("/");new=sys.argv[3].rstrip("/")
 def migrate(value):
@@ -74,6 +74,7 @@ for file in root.rglob("*.json"):
     fi
   done
 fi
+codesign --verify --deep --strict "$WORK/SoundSync.app"
 [ ! -e "$BACKUP" ] || { echo 'Резервная копия уже существует, повтори через секунду'; exit 1; }
 mv "$OLD" "$BACKUP"
 mv "$WORK/SoundSync.app" "$TARGET"
