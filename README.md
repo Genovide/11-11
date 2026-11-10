@@ -19,12 +19,14 @@
 - Бесконечная прокрутка и сортировки по названию, исполнителю, альбому, длительности и году.
 - Чёрно-жёлтое оформление SoundSync, режим без градиентов и визуализации.
 
-## Скачать 1.2.0
+## Скачать SoundSync
 
 | Система | Полная версия | Обновление |
 |---|---|---|
-| Windows x64 | [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Update-Windows-x64.zip) |
-| macOS 14+, Apple Silicon | [DMG](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.dmg) · [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Update-macOS-arm64.zip) |
+| Windows x64 | [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.1/SoundSync-1.2.1-Update-Windows-x64.zip) |
+| macOS 14+, Apple Silicon | [DMG](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.dmg) · [ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip) | [Update ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.1/SoundSync-1.2.1-Update-macOS-arm64.zip) |
+
+Актуальное обновление **1.2.1** устанавливается поверх полной версии **1.2.0**.
 
 Полные версии включают Python, FFmpeg и модель синхронизации. Пользовательской музыки, настроек, истории и ключей в них нет. Контрольные суммы — в `SHA256SUMS.txt` в релизе.
 
@@ -40,7 +42,7 @@
 
 Mac-сборка тестовая: она имеет ad-hoc подпись, но не нотарифицирована Apple. Gatekeeper может ограничивать открытие. Защиту системы отключать не нужно; для обычного публичного распространения без этих ограничений требуется Developer ID и нотариализация.
 
-Update ZIP рассчитан на установленную `SoundSync.app` с встроенной Whisper Small. Закрой приложение через меню SoundSync и запусти `Update-SoundSync.command`. При переходе со старой неработающей Mac-сборки используй полную версию.
+Update ZIP 1.2.1 рассчитан на установленную `SoundSync.app` 1.2.0. Обновляется интерфейс; встроенные Python и модель сохраняются. Локальная ad-hoc подпись восстанавливается системным codesign. Закрой приложение через меню SoundSync и запусти `Update-SoundSync.command`. При переходе со старой неработающей Mac-сборки используй полную версию.
 
 ## Примечания
 

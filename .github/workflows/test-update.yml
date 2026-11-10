@@ -1,0 +1,42 @@
+name: Test SoundSync update on Apple Silicon
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  update:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build update packages
+        env:
+          SOUNDSYNC_PYTHON: python3
+        run: node scripts/build-patches.mjs
+      - name: Download and verify released base version
+        run: |
+          test "$(uname -m)" = arm64
+          curl --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip
+          echo 'e9af35535b3fef181ae8af9ba3419cdd37eda49b1d8b7877eddb55c308468867  base.zip' | shasum -a 256 -c -
+          mkdir -p dist/SoundSync-darwin-arm64
+          ditto -x -k base.zip dist/SoundSync-darwin-arm64
+      - name: Apply the distributed update and verify signature
+        run: |
+          ditto -x -k dist/SoundSync-1.2.1-Update-macOS-arm64.zip patch
+          bash -n patch/Update-SoundSync.command
+          bash patch/Update-SoundSync.command "$PWD/dist/SoundSync-darwin-arm64/SoundSync.app"
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' dist/SoundSync-darwin-arm64/SoundSync.app/Contents/Info.plist)" = 1.2.1
+      - name: Launch updated app and check native runtime
+        run: node scripts/smoke-macos.mjs
+      - name: Upload verified Mac update to draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload v1.2.1 dist/SoundSync-1.2.1-Update-macOS-arm64.zip --repo "$GITHUB_REPOSITORY" --clobber
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SoundSync-1.2.1-update-diagnostics
+          path: dist/diagnostics/
