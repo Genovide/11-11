@@ -1,0 +1,12 @@
+.lyric-glyph{display:inline-block;white-space:pre;transform-origin:50% 75%;transition:none!important;color:inherit;vertical-align:baseline}
+.lyric-cluster{display:inline-block;white-space:pre;overflow:visible}
+.letter-timed .lyric-word{background:none;color:inherit;transform:none!important;filter:none!important;transition:none!important}
+.letter-timed .lyric-glyph,.letter-decorative .lyric-glyph{color:transparent;background-image:linear-gradient(90deg,#fff calc(var(--glyph-fill,0%) - 20%),#d7e8d05e calc(var(--glyph-fill,0%) + 20%));background-clip:text;-webkit-background-clip:text}
+.letter-timed .lyric-word.singing,.letter-timed .lyric-word.sung{transform:none!important;filter:none!important}
+.letter-decorative .lyric-line-text{transform:none!important}
+.lyric-line.letter-timed,.lyric-line.letter-decorative{overflow:visible}
+.effects-off .lyric-glyph{transform:none!important;text-shadow:none!important}
+@media(prefers-reduced-motion:reduce){.lyric-glyph{transform:none!important;text-shadow:none!important}}
+.letter-timed .lyric-word,.letter-decorative .lyric-cluster{filter:drop-shadow(0 0 .12em rgb(255 255 255 / calc(var(--word-halo,0) * .28))) drop-shadow(0 0 .36em rgb(230 245 255 / calc(var(--word-halo,0) * .18)))!important}
+.effects-off .letter-timed .lyric-word,.effects-off .lyric-cluster{filter:none!important}
+@media(prefers-reduced-motion:reduce){.letter-timed .lyric-word,.letter-decorative .lyric-cluster{filter:none!important}}

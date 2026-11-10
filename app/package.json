@@ -1,0 +1,11 @@
+{
+  "name": "soundsync-player",
+  "productName": "SoundSync",
+  "version": "1.2.0",
+  "main": "main.cjs",
+  "description": "SoundSync — music player",
+  "dependencies": {
+    "music-metadata": "^11.10.0"
+  },
+  "author": "SoundSync"
+}

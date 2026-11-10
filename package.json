@@ -1,0 +1,17 @@
+{
+  "name": "soundsync-build",
+  "private": true,
+  "version": "1.2.0",
+  "description": "SoundSync desktop player — Windows and macOS builds",
+  "scripts": {
+    "build:mac": "node scripts/build-macos.mjs",
+    "test:source": "node scripts/check-source.cjs",
+    "test:mac": "node scripts/smoke-macos.mjs",
+    "archive:mac": "node scripts/archive-macos.mjs",
+    "build:windows": "node scripts/build-windows.mjs"
+  },
+  "devDependencies": {
+    "@electron/packager": "^18.3.6",
+    "rcedit": "5.0.2"
+  }
+}

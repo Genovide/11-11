@@ -1,0 +1,9 @@
+svgPaths.favorite='M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z';
+const sidebarFeedback=node('div','sidebar-feedback');sidebarFeedback.append(dislikeCurrent,$('now-favorite'));document.querySelector('.now-details').append(sidebarFeedback);
+const playerDislike=node('button','player-feedback player-dislike'),playerLike=node('button','player-feedback player-like');playerDislike.append(icon('dislike'));playerLike.append(icon('favorite'));playerDislike.title='Не нравится — больше не показывать';playerDislike.setAttribute('aria-label',playerDislike.title);playerLike.title='Добавить в любимое';playerLike.setAttribute('aria-label',playerLike.title);
+document.querySelector('.transport-buttons').prepend(playerDislike);document.querySelector('.transport-buttons').append(playerLike);
+playerDislike.onclick=()=>dislikeCurrent.click();playerLike.onclick=()=>current&&toggleFavorite(current.id);
+function refreshPlayerFeedback(){const liked=!!current&&favorites.has(current.id);for(const b of [playerLike,$('now-favorite')]){b.classList.toggle('liked',liked);b.setAttribute('aria-pressed',String(liked));b.title=liked?'Убрать из любимого':'Добавить в любимое';b.setAttribute('aria-label',b.title)}playerLike.disabled=!current;playerDislike.disabled=!current?.remote;playerDislike.title=current&&!current.remote?'«Не нравится» доступно для треков SoundCloud':'Не нравится — больше не показывать';playerDislike.setAttribute('aria-label',playerDislike.title);$('now-favorite').replaceChildren(icon('favorite'))}
+const updateFavoriteBeforePlayerFeedback=updateFavorite;updateFavorite=function(){updateFavoriteBeforePlayerFeedback();refreshPlayerFeedback()};
+const syncBeforePlayerFeedback=syncOnlineControls;syncOnlineControls=function(){syncBeforePlayerFeedback();refreshPlayerFeedback()};
+refreshPlayerFeedback();

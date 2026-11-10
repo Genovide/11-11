@@ -1,0 +1,54 @@
+name: Build and test SoundSync on Apple Silicon
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: soundsync-macos-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require native Apple Silicon
+        run: test "$(uname -m)" = arm64
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install build tools
+        run: |
+          npm install --no-audit --no-fund
+          npm install --prefix app --omit=dev --no-audit --no-fund
+          python3 -m venv "$RUNNER_TEMP/uv-bootstrap"
+          "$RUNNER_TEMP/uv-bootstrap/bin/python" -m pip install uv
+          echo "$RUNNER_TEMP/uv-bootstrap/bin" >> "$GITHUB_PATH"
+      - name: Check source and platform paths
+        run: npm run test:source
+      - name: Build fresh app and native runtime
+        run: npm run build:mac
+      - name: Launch the packaged application on macOS
+        run: npm run test:mac
+      - name: Create ZIP and DMG only after a successful launch
+        run: npm run archive:mac
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: SoundSync-macOS-AppleSilicon-test
+          path: |
+            dist/*.zip
+            dist/*.dmg
+            dist/SHA256SUMS-macOS.txt
+            dist/BUILD-INFO.json
+          retention-days: 14
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SoundSync-macOS-diagnostics
+          path: dist/diagnostics/
+          if-no-files-found: ignore
+          retention-days: 14

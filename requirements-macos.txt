@@ -1,0 +1,11 @@
+# Resolved natively on Apple Silicon; never copy Windows site-packages.
+torch==2.8.0
+torchaudio==2.8.0
+numpy>=1.26,<3
+stable-ts==2.19.1
+openai-whisper==20250625
+imageio-ffmpeg==0.6.0
+mutagen==1.47.0
+yt-dlp>=2026.10.26
+curl_cffi>=0.13,<1
+demucs==4.0.1
