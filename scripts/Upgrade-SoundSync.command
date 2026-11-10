@@ -54,8 +54,8 @@ ditto "$HERE/payload/alignment" "$WORK/SoundSync.app/Contents/Resources/alignmen
 # Check the relocated native engine before signing and before replacing the app.
 echo 'Проверяется запуск движка синхронизации…'
 "$WORK/SoundSync.app/Contents/Resources/alignment/runtime/bin/python3.12" -I -B -c 'import torch,torchaudio,stable_whisper,imageio_ffmpeg; from torch.utils.data import DataLoader; from demucs.pretrained import get_model; assert torch.ones(1).sum().item()==1; print("Python/PyTorch OK")'
-/usr/libexec/PlistBuddy -c 'Set CFBundleShortVersionString 1.2.3' "$WORK/SoundSync.app/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set CFBundleVersion 1.2.3' "$WORK/SoundSync.app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set CFBundleShortVersionString 1.2.4' "$WORK/SoundSync.app/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set CFBundleVersion 1.2.4' "$WORK/SoundSync.app/Contents/Info.plist"
 codesign --force --deep --sign - "$WORK/SoundSync.app"
 codesign --verify --deep --strict "$WORK/SoundSync.app"
 PROFILE="$HOME/Library/Application Support/SoundSync"
@@ -92,6 +92,6 @@ mv "$OLD" "$BACKUP"
 REPLACED=true
 mv "$WORK/SoundSync.app" "$TARGET"
 INSTALLED=true
-echo "SoundSync 1.2.3 установлен: $TARGET"
+echo "SoundSync 1.2.4 установлен: $TARGET"
 echo "Резервная копия: $BACKUP"
 echo 'Музыка, медиатека, история и настройки сохранены. Заверения Apple по-прежнему нет.'

@@ -1,11 +1,30 @@
 const {app,BrowserWindow,ipcMain,dialog,protocol,net,safeStorage}=require('electron');app.setPath('userData',require('./platform-config.cjs').userDataPath({exe:app.getPath('exe'),appData:app.getPath('appData')}));const testProfile=process.env.SOUNDSYNC_SMOKE_DIR||process.env.SOUNDSYNC_UI_TEST_DIR;if(testProfile)app.setPath('userData',require('node:path').resolve(testProfile));app.setName('SoundSync');if(process.platform==='win32')app.setAppUserModelId('SoundSync.Player');
 const fs=require('node:fs/promises'),path=require('node:path'),crypto=require('node:crypto');
+const uiThemeFile=path.join(app.getPath('userData'),'ui-preferences.json');
+let uiPreferences={},uiThemeWrites=Promise.resolve();
+try{const value=JSON.parse(require('node:fs').readFileSync(uiThemeFile,'utf8'));if(value&&typeof value==='object'&&!Array.isArray(value))uiPreferences=value}catch{}
+function persistUiPreferences(event,patch){
+ if(!win||event.sender!==win.webContents)throw Error('Invalid preference sender');
+ if(typeof patch.flatTheme==='boolean')uiPreferences.flatTheme=patch.flatTheme;
+ if(typeof patch.volume==='number'&&Number.isFinite(patch.volume)&&patch.volume>=0&&patch.volume<=1)uiPreferences.volume=patch.volume;
+ if(['library','soundcloud'].includes(patch.randomSourceChoice))uiPreferences.randomSourceChoice=patch.randomSourceChoice;
+ if(Array.isArray(patch.playedTrackKeys))uiPreferences.playedTrackKeys=[...new Set(patch.playedTrackKeys.filter(id=>typeof id==='string'&&id.length<=240))].slice(-100000);
+ if(Array.isArray(patch.recent))uiPreferences.recent=patch.recent.filter(id=>typeof id==='string'&&id.length<=200).slice(0,100);
+ if(Array.isArray(patch.favoriteIds))uiPreferences.favoriteIds=[...new Set(patch.favoriteIds.filter(id=>typeof id==='string'&&id.length<=200))];
+ const data=JSON.stringify(uiPreferences);
+ uiThemeWrites=uiThemeWrites.catch(()=>{}).then(async()=>{await fs.mkdir(path.dirname(uiThemeFile),{recursive:true});await fs.writeFile(uiThemeFile+'.tmp',data);await fs.rename(uiThemeFile+'.tmp',uiThemeFile)});
+ return uiThemeWrites;
+}
+ipcMain.on('ui-theme-read',event=>{event.returnValue=typeof uiPreferences.flatTheme==='boolean'?uiPreferences.flatTheme:null});
+ipcMain.handle('ui-theme-save',(event,flat)=>persistUiPreferences(event,{flatTheme:flat}));
+ipcMain.on('ui-preferences-read',event=>{event.returnValue=uiPreferences});
+ipcMain.handle('ui-preferences-save',(event,patch)=>persistUiPreferences(event,patch&&typeof patch==='object'?patch:{}));
 const {pathToFileURL}=require('node:url');
 let quitting=false;const rendererErrors=[];
 async function startupLog(message){try{const dir=app.getPath('userData');await fs.mkdir(dir,{recursive:true});await fs.appendFile(path.join(dir,'startup.log'),new Date().toISOString()+' '+message+'\n')}catch{}}
 async function startupFailure(error){await startupLog(error.stack||String(error));dialog.showErrorBox('SoundSync — ошибка запуска',String(error.message||error)+'\n\nПодробности: '+path.join(app.getPath('userData'),'startup.log'));app.quit()}
 ipcMain.on('renderer-diagnostic',(event,payload)=>{if(win&&event.sender===win.webContents){rendererErrors.push(payload);startupLog('Renderer: '+JSON.stringify(payload))}});
-app.on('before-quit',()=>{quitting=true});app.on('activate',()=>{if(win&&!win.isDestroyed())win.show()});
+app.on('before-quit',event=>{if(!quitting){event.preventDefault();quitting=true;Promise.allSettled([uiThemeWrites,soundcloud?.flush?.()]).finally(()=>app.quit())}});app.on('activate',()=>{if(win&&!win.isDestroyed())win.show()});
 
 protocol.registerSchemesAsPrivileged([{scheme:'lumen',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true,corsEnabled:true,bypassCSP:false}}]);
 let soundcloud,alignmentEngine,lyricsStore,libraryMetadata;let win,library={folder:'',tracks:[]},allowed=new Map(),scanBusy=false;
@@ -42,6 +61,7 @@ app.whenReady().then(async()=>{
  if(smoke)app.setPath('userData',path.join(__dirname,'..','..','..','..','work','lumen-test-profile'));alignmentEngine=require('./alignment.cjs')({app,ipcMain,getLibrary:()=>library,save,send:(channel,data)=>win?.webContents.send(channel,data)});
  lyricsStore=require('./custom-lyrics.cjs')({app,ipcMain,getLibrary:()=>library,save,isAligning:id=>alignmentEngine.isAligning(id)});try{library=JSON.parse(await fs.readFile(dataFile(),'utf8'))}catch{}libraryMetadata.restore(library.tracks);await lyricsStore.restore(library.tracks);await alignmentEngine.restore(library.tracks);allow();require('./lyrics-search.cjs')({app,ipcMain});soundcloud=require('./soundcloud.cjs')({app,ipcMain,dialog,safeStorage,getWindow:()=>win,getLibrary:()=>library,save,refreshAllowed:allow,readTrack:readLocalTrack,isAligning:id=>scanBusy||alignmentEngine.isAligning(id),send:(channel,data)=>win?.webContents.send(channel,data)});
  require('./song-insight.cjs')({app,ipcMain,safeStorage,getLibrary:()=>library,getRemoteTrack:id=>soundcloud.getTrack(id)});
+ require('./local-playback.cjs')({app,ipcMain,getWindow:()=>win,getLibrary:()=>library,register:(id,file)=>allowed.set(id,file)});
  protocol.handle('lumen',async request=>{
   if(new URL(request.url).hostname.startsWith('sc-'))return soundcloud.handleProtocol(request);
   const p=allowed.get(new URL(request.url).pathname.slice(1));if(!p)return new Response('Not found',{status:404});

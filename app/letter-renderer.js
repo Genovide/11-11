@@ -33,7 +33,8 @@ setLyrics=function(t){
 };
 function paintLyricLetters(time){
  const motion=effect&&!reduced;
- for(const group of lyricGlyphGroups){if(group.uncertain||lyricBox.classList.contains('manual-gap')){group.reset=null;const completed=group.uncertain&&!lyricBox.classList.contains('manual-gap')&&time>=group.completeAt;group.element.style.setProperty("--word-halo","0");for(const span of group.glyphs){span.style.transform="";span.style.textShadow="";span.style.setProperty("--glyph-fill",completed?"120%":"-20%")}continue}
+ for(const group of lyricGlyphGroups){
+  if(group.uncertain||lyricBox.classList.contains('manual-gap')){group.reset=null;const completed=group.uncertain&&!lyricBox.classList.contains('manual-gap')&&time>=group.completeAt;group.element.style.setProperty("--word-halo","0");for(const span of group.glyphs){span.style.transform="";span.style.textShadow="";span.style.setProperty("--glyph-fill",completed?"120%":"-20%")}continue}
   const elapsed=time-group.start;
   const glowIn=Math.max(0,Math.min(1,(elapsed+.12)/.4)),glowOut=Math.max(0,Math.min(1,(group.duration+.65-elapsed)/.75));
   const wordGlow=motion?glowIn*glowIn*(3-2*glowIn)*glowOut*glowOut*(3-2*glowOut):0;

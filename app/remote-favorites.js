@@ -11,4 +11,4 @@ const toggleFavoriteBeforeRemote=toggleFavorite;toggleFavorite=function(id){
  toggleFavoriteBeforeRemote(id);
  if(track?.remote||id.startsWith('sc-'))remoteFavoritesWrite=remoteFavoritesWrite.catch(()=>{}).then(()=>window.lumen.scFavoriteSet(id,!removing)).catch(e=>toast('Не удалось сохранить избранное SoundCloud: '+cleanError(e)));
 };
-window.lumen.scFavoriteTracks([...favorites].filter(id=>id.startsWith('sc-'))).then(tracks=>{for(const t of tracks)if(!changedRemoteFavorites.has(t.id)){remoteFavoriteTracks.set(t.id,t);favorites.add(t.id)}cacheRemoteFavorites();localStorage.setItem('favorites',JSON.stringify([...favorites]));render();updateFavorite()}).catch(e=>{if(remoteFavoriteTracks.size)render();console.warn('SoundCloud favorites restore:',cleanError(e))});
+window.lumen.scFavoriteTracks([...favorites].filter(id=>id.startsWith('sc-'))).then(tracks=>{for(const t of tracks)if(!changedRemoteFavorites.has(t.id)){remoteFavoriteTracks.set(t.id,t);favorites.add(t.id)}cacheRemoteFavorites();persistFavoriteIds();render();updateFavorite()}).catch(e=>{if(remoteFavoriteTracks.size)render();console.warn('SoundCloud favorites restore:',cleanError(e))});

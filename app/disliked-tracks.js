@@ -15,7 +15,7 @@ async function dislikeOnlineTrack(t){
  try{
   await remoteFavoritesWrite.catch(()=>{});excludedOnlineTracks=await window.lumen.scExcludedSet(t.id,true);cacheExclusions();
   for(const [id,track]of remoteFavoriteTracks)if(excludedOnline(track)){remoteFavoriteTracks.delete(id);favorites.delete(id);changedRemoteFavorites.add(id)}
-  favorites.delete(t.id);changedRemoteFavorites.add(t.id);cacheRemoteFavorites();localStorage.setItem('favorites',JSON.stringify([...favorites]));
+  favorites.delete(t.id);changedRemoteFavorites.add(t.id);cacheRemoteFavorites();persistFavoriteIds();
   const before=queue.slice(0,qi+1).filter(x=>!excludedOnline(x)).length;queue=queue.filter(x=>!excludedOnline(x));qi=before-1;upNext=upNext.filter(x=>!excludedOnline(x));manualReturn=manualReturn.filter(x=>!excludedOnline(x));scTracks=scTracks.filter(x=>!excludedOnline(x));
   if(current?.id===t.id){if(queue.length||upNext.length||waveMode)await advance(1);else{audio.pause();audio.removeAttribute('src');audio.load();current=null;$('mini-title').textContent=$('now-title').textContent='Выбери другую музыку';$('mini-artist').textContent=$('now-artist').textContent='';$('mini-cover').replaceChildren();$('now-cover').replaceChildren();setLyrics({lyrics:''})}}
   render();renderOnline();renderQueue();updateFavorite();syncOnlineControls();toast('Больше не будем показывать этот трек. Отменить можно в настройках SoundCloud.');

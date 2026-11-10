@@ -85,7 +85,7 @@ body.flat-theme #atmosphere,body.flat-theme .grain { visibility: hidden; }
 body:not(.flat-theme) .hero .orb { background: radial-gradient(ellipse at 32% 12%,var(--surface-raised),var(--surface)); box-shadow: none; border-color: color-mix(in srgb,var(--ui-accent) 25%,transparent); }
 body:not(.flat-theme) .hero .orb::before { background: none; border-color: color-mix(in srgb,var(--ui-accent) 20%,transparent); }
 .hero .wave-orb-caption,.hero .orb .orb-label { color: var(--ui-muted); }
-body>.now-panel { display: grid; grid-template-rows: minmax(0,1fr) auto minmax(130px,.42fr); gap: 14px; padding: 18px; overflow: hidden; background: var(--panel)!important; border-color: var(--ui-border); transition: none; }
+body>.now-panel { margin: 0; border: 0; border-radius: 0; box-shadow: none; display: grid; grid-template-rows: minmax(0,auto) auto minmax(120px,1fr); gap: 14px; padding: 18px; overflow: hidden; background: var(--panel)!important; border-color: var(--ui-border); transition: none; }
 .now-summary { min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; padding-right: 3px; }
 .now-summary .now-heading { margin-bottom: 12px; min-height: 32px; font-size: 9px; letter-spacing: 1.4px; color: var(--ui-faint); }
 .now-summary .now-cover { width: min(100%,28vh); max-width: 100%; max-height: none; aspect-ratio: 1; margin: 0 auto; border-radius: 14px; background: var(--surface-raised); }
@@ -112,7 +112,7 @@ body>.now-panel { display: grid; grid-template-rows: minmax(0,1fr) auto minmax(1
 .lyric-line.plain { color: #b9b9c2; opacity: 1; }
 .synced .lyric-line.current,.lyric-line.current { color: #fafafa; opacity: 1; filter: none; }
 .letter-timed .lyric-glyph,.letter-decorative .lyric-glyph { background-image: linear-gradient(90deg,#fff calc(var(--glyph-fill,0%) - 20%),#a0a0ab calc(var(--glyph-fill,0%) + 20%)); }
-.song-insight { padding: 0; margin: 12px -34px 0 0; border: 0; border-radius: 0; background: transparent; }
+.song-insight { padding: 0; margin: 12px 0 0; border: 0; border-radius: 0; background: transparent; }
 .insight-disclosure { border-top: 1px solid var(--ui-border); }
 .insight-disclosure>summary { min-height: 38px; display: flex; align-items: center; justify-content: space-between; list-style: none; cursor: pointer; color: var(--ui-muted); font-size: 12px; }
 .insight-disclosure>summary::after { content: '+'; font-size: 18px; }
@@ -206,7 +206,8 @@ body:not(.flat-theme) #immersive { background: radial-gradient(ellipse at 10% 20
   :root { transition: none; }
   #immersive { animation: none; }
 }
-/* 1.2.3: one accent treatment and one scroll viewport inside the now-playing card. */
+
+/* Use the same accent treatment on all home cards. */
 .home-picks .home-pick,
 .home-picks .home-pick.wave,
 .home-picks .home-pick.love {
@@ -230,61 +231,169 @@ body:not(.flat-theme) #immersive { background: radial-gradient(ellipse at 10% 20
 .home-picks .home-pick:hover { transform: none; border-color: color-mix(in srgb,var(--ui-accent) 45%,var(--ui-border)); }
 body.flat-theme .home-picks .home-pick::before { display: none; }
 body.flat-theme .home-picks .home-pick { background: var(--surface); }
-body>.now-panel {
-  display: block;
-  position: relative;
-  isolation: isolate;
-  min-width: 0;
-  min-height: 0;
-  margin: 8px 12px 12px 0;
-  padding: 0;
-  border-radius: 20px;
-  overflow: hidden;
-  contain: paint;
-  background: var(--panel)!important;
+
+/* Pointer motion is decorative: control hit areas and the player remain still. */
+@media(hover:hover) and (prefers-reduced-motion:no-preference) {
+  :is(.home-pick,.home-album,.album-card,.folder-card) {
+    transform: perspective(900px) translate3d(0,0,0);
+    transform-origin: 50% 50%;
+    transition: transform 260ms cubic-bezier(.2,.75,.25,1),box-shadow 260ms ease,border-color 200ms ease;
+  }
+  :is(.home-pick,.home-album,.album-card,.folder-card).pointer-hover,
+  .home-picks .home-pick.pointer-hover {
+    transform: perspective(900px) translate3d(var(--hover-x,0px),calc(-3px + var(--hover-y,0px)),0) rotateX(var(--hover-rx,0deg)) rotateY(var(--hover-ry,0deg));
+    box-shadow: 0 10px 24px #0003;
+  }
 }
-.now-content {
-  box-sizing: border-box;
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-  padding: 18px 20px 24px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  border-radius: inherit;
-}
-.now-content .now-summary { overflow: visible; padding: 0; }
-.now-content .now-heading { min-height: 36px; margin: 0 0 14px; }
-.now-content .now-cover { width: 100%; max-width: 300px; margin: 0 auto; aspect-ratio: 1; border-radius: 16px; }
-.now-content .now-details { padding: 0; margin: 20px 0 0; min-width: 0; }
-.now-content .now-details h2 { padding-right: 38px; margin-right: 0; font-size: 21px; overflow-wrap: anywhere; }
-.now-content .now-details p { padding-right: 38px; }
-.now-content .now-details .heart { top: 0; right: 0; }
-.now-content .alignment-tools { margin: 18px 0 0; gap: 8px; }
-.now-content .alignment-button { min-height: 38px; max-width: 100%; flex: 0 1 auto; }
-.now-content .alignment-label { margin-top: 2px; overflow-wrap: anywhere; }
-.now-content .song-insight,
-.now-content .now-details:has(.dislike-current:not(.hidden)) .song-insight { margin: 14px 0 0; }
-.now-content .panel-tabs { position: sticky; top: 0; z-index: 3; margin: 20px 0 8px; background: var(--surface); box-shadow: 0 8px 16px var(--panel); }
-.now-content>.lyrics,.now-content>.queue {
-  height: auto;
-  min-height: 140px;
-  max-height: none;
-  flex: none;
-  padding: 16px 2px 24px;
-  margin: 0;
-  overflow: visible;
-  mask-image: none;
-  -webkit-mask-image: none;
-}
-.now-content .lyric-line { box-sizing: border-box; padding: 12px 3px; font-size: 21px; line-height: 1.45; overflow-wrap: anywhere; transform: none; }
-.now-content .lyrics.synced { padding-top: 16px; padding-bottom: 24px; }
-.now-content .queue button { white-space: normal; overflow-wrap: anywhere; }
-.now-content .insight-text { max-height: none; overflow: visible; }
-body>main { scrollbar-gutter: stable; }
 @media(max-width:940px) { body>.now-panel { display: none; } }
 
-/* Accent the meaning of section headings, using the same theme token as controls. */
-.home-section-heading .text-accent,.home-pick .text-accent { color: var(--ui-accent); font-weight: inherit; }
+/* Bound the portrait by the banner height, rather than growing with window width. */
+.dashboard-home .hero .hero-statue {
+  width: auto;
+  height: auto;
+  max-width: 44%;
+  max-height: calc(100% + 16px);
+  bottom: 0;
+  left: 32%;
+  object-fit: contain;
+  object-position: center bottom;
+}
+@media(max-width:1200px) {
+  .dashboard-home .hero .hero-statue { max-width: 48%; left: 28%; }
+}
+/* The sidebar fills its column; spacing belongs to its content, not an outer card. */
+body>.now-panel { box-sizing: border-box; padding: 18px; overflow: hidden; }
+.now-summary { padding: 0; scrollbar-gutter: auto; }
+.now-panel>.lyrics,.now-panel>.queue { box-sizing: border-box; padding: 16px 0 80px; scroll-padding-block: 20px 56px; scrollbar-gutter: auto; }
+.now-panel .panel-tabs { box-sizing: border-box; min-width: 0; width: 100%; gap: 4px; padding: 4px; box-shadow: none; }
+.now-panel .panel-tabs button { min-width: 0; flex: 1 1 0; text-align: center; }
+.now-panel .sidebar-feedback>#now-favorite { border: 0; border-radius: 50%; box-shadow: none; }
+.now-panel .sidebar-feedback>#now-favorite:focus:not(:focus-visible) { outline: none; }
+#immersive .lyrics {
+  box-sizing: border-box;
+  padding-bottom: max(160px,35vh);
+  scroll-padding-block: 40px 96px;
+}
+#immersive .lyric-line { box-sizing: border-box; padding-right: 14px; overflow-wrap: anywhere; }
+/* Natural-height track information, matching the full-column reference layout. */
+body>.now-panel { padding: 18px 20px; row-gap: 16px; }
+.now-summary .now-cover { width: min(100%,32vh); max-height: none; }
+.now-panel .now-details { padding-right: 0; }
+.now-panel .now-details h2,.now-panel .now-details p { padding-right: 40px; }
+.now-panel .now-details:has(.dislike-current:not(.hidden)) h2,
+.now-panel .now-details:has(.dislike-current:not(.hidden)) p { padding-right: 72px; }
+.now-panel .alignment-tools { margin: 16px 0 0; gap: 8px; width: 100%; }
+.now-panel .alignment-button { flex: 0 1 auto; min-width: 0; padding: 9px 10px; font-size: 11px; white-space: nowrap; }
+.now-panel .alignment-button svg { width: 16px; height: 16px; }
+.now-panel .alignment-label { width: 100%; line-height: 1.5; }
+.now-panel .panel-tabs { margin-top: 0; }
+/* Hide vertical scroll controls, while retaining wheel, touch and keyboard scrolling. */
+:is(main,.now-summary,.lyrics,.queue,#immersive .immersive-info) {
+  scrollbar-width: none;
+  scrollbar-gutter: auto;
+}
+:is(main,.now-summary,.lyrics,.queue,#immersive .immersive-info)::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+:is(main,.now-summary,.lyrics,.queue,#immersive .immersive-info)::-webkit-scrollbar-button { display: none; }
+@media(max-height:760px) {
+  body>.now-panel { grid-template-rows: minmax(0,auto) auto minmax(90px,1fr); row-gap: 12px; padding: 14px 18px; }
+  .now-summary .now-cover { width: min(100%,22vh); }
+}
+/* The outer sidebar can scroll too: hide native chrome on every sidebar layer. */
+body .now-panel,body .now-panel * { scrollbar-width: none!important; scrollbar-gutter: auto!important; }
+body .now-panel::-webkit-scrollbar,body .now-panel *::-webkit-scrollbar { display: none!important; width: 0!important; height: 0!important; }
+body .now-panel::-webkit-scrollbar-button,body .now-panel *::-webkit-scrollbar-button { display: none!important; width: 0!important; height: 0!important; }
+.now-panel .song-insight,
+.now-panel .now-details:has(.dislike-current:not(.hidden)) .song-insight {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  margin: 14px 0 0;
+}
+.now-panel .insight-disclosure,.now-panel .insight-head { min-width: 0; max-width: 100%; }
+.now-panel .insight-settings-button { flex: 0 0 auto; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.insight-dialog {
+  box-sizing: border-box;
+  width: min(620px,calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.insight-dialog .editor-actions { min-width: 0; flex-wrap: wrap; }
+.insight-dialog input:not([type=checkbox]) { box-sizing: border-box; min-width: 0; max-width: 100%; }
+/* Line focus is separate from the active line's progressive karaoke fill. */
+.lyrics.synced .lyric-line:not(.current) {
+  color: #85858f;
+  opacity: .43;
+  filter: blur(2px)!important;
+  text-shadow: none;
+  transition: opacity 450ms ease,filter 450ms ease,color 450ms ease;
+  transition-delay: 0ms;
+}
+.lyrics.synced .lyric-line.near:not(.current) { opacity: .58; filter: blur(1.15px)!important; }
+.lyrics.synced .lyric-line.past:not(.current) { opacity: .36; filter: blur(2.2px)!important; }
+.lyrics.synced .lyric-line.current { opacity: 1; color: #fafafa; filter: none!important; }
+.lyrics.synced .lyric-line:not(.current) .lyric-glyph {
+  background-image: none;
+  color: inherit;
+  text-shadow: none!important;
+}
+.lyrics.synced .lyric-line.current :is(.lyric-word,.lyric-cluster,.lyric-glyph,.lyric-line-text) {
+  color: inherit;
+  opacity: 1;
+  filter: none!important;
+  background-image: none;
+  text-shadow: none!important;
+}
+/* Active text follows the reference: white progress into muted letters, no word-level dimming. */
+.lyrics.synced .lyric-line.current .lyric-glyph {
+  color: transparent;
+  background-image: linear-gradient(90deg,#fafafa calc(var(--glyph-fill,0%) - 20%),#92929c calc(var(--glyph-fill,0%) + 20%));
+  background-clip: text;
+  -webkit-background-clip: text;
+  opacity: 1;
+  filter: none!important;
+}
+
+/* Flat mode uses one continuous main background, including the sticky search header. */
+body.flat-theme > main,
+body.flat-theme > main .topline { background: #101010; }
+/* Use a real centered SVG instead of a font glyph and hidden leftover text. */
+.hero .hero-actions { display: flex; align-items: center; gap: 10px; }
+.hero #play-all { box-sizing: border-box; height: 42px; min-height: 42px; padding: 0 20px; margin: 0; align-self: center; }
+.hero #shuffle-all { display: grid; place-items: center; box-sizing: border-box; flex: 0 0 42px; width: 42px; height: 42px; min-height: 42px; padding: 0; margin: 0; border-radius: 50%; align-self: center; font-size: 0; line-height: 0; gap: 0; }
+.hero #shuffle-all::before { content: none; display: none; }
+.hero #shuffle-all svg { width: 20px; height: 20px; margin: 0; }
+/* Keep the label centered; lower only the smaller counter. */
+.sidebar .nav[data-view=tracks] { align-items: center; }
+.sidebar .nav[data-view=tracks]>span:first-child { align-self: center; }
+.sidebar .nav #side-count { display: inline-block; align-self: center; line-height: inherit; position: relative; top: 1px; margin-top: 0; margin-bottom: 0; font-variant-numeric: tabular-nums; }
+.home-section-heading:has(.home-random-switch) { flex-wrap: wrap; gap: 12px; }
+.home-section-heading:has(.home-random-switch) h2 { margin-right: 4px; }
+.home-section-heading:has(.home-random-switch) .home-see-all { margin-left: auto; }
+.home-random-switch { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid var(--ui-border); border-radius: 10px; background: var(--surface); }
+.home-random-switch button { min-height: 30px; padding: 6px 10px; border-radius: 7px; color: var(--ui-muted); font-size: 11px; white-space: nowrap; }
+.home-random-switch button.active { background: var(--surface-raised); color: var(--ui-text); }
+.home-random-switch button:hover { color: var(--ui-text); }
+.home-card-source { position: absolute; top: 8px; left: 8px; max-width: calc(100% - 16px); padding: 4px 7px; border-radius: 6px; background: #101014cc; color: #f2f2f4; font-size: 9px; line-height: 1.3; }
+@media(max-width:1150px) { .home-random-switch { width: max-content; } }
+main { overflow-anchor: none; }
+.sidebar .folder-card #choose-folder { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.sidebar .folder-card #choose-folder>span { margin: 0; float: none; }
+.sidebar .folder-card #choose-folder svg { width: 18px; height: 18px; flex: 0 0 18px; }
+/* Group favorite feedback beside the track actions, instead of the title. */
+.now-panel .now-details h2,.now-panel .now-details p,
+.now-panel .now-details:has(.dislike-current:not(.hidden)) h2,
+.now-panel .now-details:has(.dislike-current:not(.hidden)) p { padding-right: 0; }
+.now-actions-row { display: flex; align-items: flex-start; gap: 8px; margin-top: 16px; }
+.now-action-tools { flex: 1 1 auto; min-width: 0; }
+.now-panel .now-actions-row .alignment-tools { width: 100%; margin: 0; }
+.now-panel .now-actions-row .current-file-actions { margin: 0; }
+.now-panel .now-actions-row .sidebar-feedback { position: static; display: flex; flex: 0 0 auto; align-items: center; align-self: flex-start; height: 38px; margin: 0; gap: 4px; }
+.now-panel .now-actions-row .sidebar-feedback>#now-favorite,
+.now-panel .now-actions-row .sidebar-feedback>.dislike-current { position: static; display: grid; place-items: center; width: 34px; height: 38px; margin: 0; padding: 0; border: 0; border-radius: 10px; }

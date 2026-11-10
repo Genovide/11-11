@@ -20,7 +20,7 @@ let listeningView='visual',listeningReturnFocus=null,sidebarLyrics=true;
 const listeningHomes=new Map();
 function mountListeningContent(){
  sidebarLyrics=!$('lyrics').classList.contains('hidden');
- for(const [selector,target] of [['.alignment-tools',listeningActions],['.song-insight',listeningActions],['.now-panel .panel-tabs',listeningLyrics],['#lyrics',listeningLyrics],['#queue',listeningLyrics]]){
+ for(const [selector,target] of [['.alignment-tools',listeningActions],['.song-insight',listeningActions],['#lyrics',listeningLyrics]]){
   const element=document.querySelector(selector);if(!element)continue;
   const placeholder=document.createComment('listening-home');element.before(placeholder);listeningHomes.set(element,placeholder);target.append(element);
  }

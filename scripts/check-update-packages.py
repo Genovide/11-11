@@ -2,8 +2,9 @@
 import hashlib,json,pathlib,zipfile
 
 dist=pathlib.Path('dist')
+version=json.loads(pathlib.Path('app/package.json').read_text(encoding='utf-8'))['version']
 for platform,arch in [('Windows','x64'),('macOS','arm64')]:
-    name=f'SoundSync-1.2.3-Update-{platform}-{arch}.zip'
+    name=f'SoundSync-{version}-Update-{platform}-{arch}.zip'
     with zipfile.ZipFile(dist/name) as z:
         assert z.testzip() is None
         names=set(z.namelist())
