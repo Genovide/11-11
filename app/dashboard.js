@@ -8,7 +8,12 @@ const statue=node('img','hero-statue');statue.src='assets/soundsync-statue.png';
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 hero.addEventListener('pointermove',e=>{if(reducedMotion.matches||e.pointerType==='touch')return;const r=hero.getBoundingClientRect();hero.style.setProperty('--statue-x',((e.clientX-r.left)/r.width-.5)*7+'px');hero.style.setProperty('--statue-y',((e.clientY-r.top)/r.height-.5)*-5+'px')});hero.addEventListener('pointerleave',()=>{hero.style.setProperty('--statue-x','0px');hero.style.setProperty('--statue-y','0px')});
 const homeContent=node('div','home-content');hero.after(homeContent);
-const heading=(title,action)=>{const h=node('div','home-section-heading');h.append(node('h2','',title));if(action){const b=node('button','home-see-all','Смотреть всё ↗');b.onclick=action;h.append(b)}return h};
+function accentedTitle(title,tag='h2'){
+ const word=({'Твой следующий вайб':'вайб','Случайные треки':'Случайные','История прослушивания':'История','Твои альбомы':'альбомы','Твой поток':'поток','Моя волна':'волна','Любимое':'Любимое'})[title];
+ const label=node(tag);if(!word){label.textContent=title;return label}
+ const start=title.indexOf(word);label.append(document.createTextNode(title.slice(0,start)),node('span','text-accent',word),document.createTextNode(title.slice(start+word.length)));return label;
+}
+const heading=(title,action)=>{const h=node('div','home-section-heading');h.append(accentedTitle(title));if(action){const b=node('button','home-see-all','Смотреть всё ↗');b.onclick=action;h.append(b)}return h};
 const leave=()=>{home=false;document.body.classList.remove('dashboard-home');homeNav.classList.remove('active')};
 const goLibrary=()=>{leave();document.querySelector('[data-view="tracks"]').click();main.scrollTop=0};
 const recentKey='soundsync-recent-v1';let recent=[];try{recent=JSON.parse(localStorage.getItem(recentKey)||'[]');if(!Array.isArray(recent))recent=[]}catch{}
@@ -19,7 +24,7 @@ audio.addEventListener('play',()=>{if(!current)return;recent=[current.id,...rece
 function trackCards(tracks,limit=6){const grid=node('div','home-albums');for(const t of tracks.slice(0,limit)){const b=node('button','home-album');b.append(art(t,'home-art'),node('strong','',t.title),node('small','',t.artist));const play=node('span','home-card-play','▶');b.append(play);b.onclick=()=>playList(tracks,tracks.indexOf(t));grid.append(b)}return grid}
 function drawHome(){homeContent.replaceChildren();const picks=node('div','home-picks');
 const choices=[['Твой поток','Знакомое звучит по-новому','flow',()=>{$('shuffle-all').click()}],['Моя волна','Найди новое настроение','wave',()=>{if(typeof waveDialog!=='undefined')waveDialog.showModal()}],['Любимое','То, что хочется повторить','love',()=>{leave();document.querySelector('[data-view="favorites"]').click()}]];
-for(const [title,subtitle,cls,action] of choices){const b=node('button','home-pick '+cls),text=node('div');text.append(node('strong','',title),node('small','',subtitle));b.append(node('span','pick-symbol',cls==='flow'?'≋':cls==='wave'?'✦':'♡'),text,node('span','pick-play','▶'));b.onclick=action;picks.append(b)}
+for(const [title,subtitle,cls,action] of choices){const b=node('button','home-pick '+cls),text=node('div');text.append(accentedTitle(title,'strong'),node('small','',subtitle));b.append(node('span','pick-symbol',cls==='flow'?'≋':cls==='wave'?'✦':'♡'),text,node('span','pick-play','▶'));b.onclick=action;picks.append(b)}
 homeContent.append(heading('Твой следующий вайб'),picks);
 if(randomSource!==JSON.stringify(library.tracks.map(t=>t.id)))refreshRandom();
 const list=randomIds.map(id=>library.tracks.find(t=>t.id===id)).filter(Boolean);

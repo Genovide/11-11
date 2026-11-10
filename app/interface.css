@@ -285,3 +285,6 @@ body>.now-panel {
 .now-content .insight-text { max-height: none; overflow: visible; }
 body>main { scrollbar-gutter: stable; }
 @media(max-width:940px) { body>.now-panel { display: none; } }
+
+/* Accent the meaning of section headings, using the same theme token as controls. */
+.home-section-heading .text-accent,.home-pick .text-accent { color: var(--ui-accent); font-weight: inherit; }
