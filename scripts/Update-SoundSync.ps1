@@ -1,4 +1,4 @@
-param([string]$Root='')
+﻿param([string]$Root='')
 $ErrorActionPreference='Stop'
 $payload=Join-Path $PSScriptRoot 'payload'
 if(!$Root){Add-Type -AssemblyName System.Windows.Forms;$picker=New-Object System.Windows.Forms.FolderBrowserDialog;$picker.Description='Выбери папку установленного SoundSync';if($picker.ShowDialog() -ne 'OK'){exit};$Root=$picker.SelectedPath}
