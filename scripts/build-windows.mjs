@@ -1,10 +1,13 @@
-import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';import {rcedit} from 'rcedit';
+import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';import {execFileSync} from 'node:child_process';import {rcedit} from 'rcedit';import {stageWindowsRepair} from './stage-windows-repair.mjs';
 if(process.platform!=='win32')throw Error('Build Windows packages on Windows');
 const root=process.cwd(),base=process.env.SOUNDSYNC_WINDOWS_BASE;if(!base||!fs.existsSync(path.join(base,'SoundSync.exe')))throw Error('Set SOUNDSYNC_WINDOWS_BASE to a complete local SoundSync portable runtime');
 const stage=path.join(root,'.build','windows','SoundSync');fs.mkdirSync(stage,{recursive:true});
 for(const e of fs.readdirSync(base,{withFileTypes:true})){if(e.name==='Data'||e.name==='alignment'||e.name==='resources'||e.name.startsWith('Create-')||e.name.endsWith('.lnk'))continue;fs.cpSync(path.join(base,e.name),path.join(stage,e.name),{recursive:true});}
 fs.cpSync(path.join(base,'resources'),path.join(stage,'resources'),{recursive:true});fs.cpSync(path.join(base,'alignment'),path.join(stage,'alignment'),{recursive:true,filter:file=>!file.includes('__pycache__')});
 fs.cpSync(path.join(root,'app'),path.join(stage,'resources','app'),{recursive:true,filter:file=>!file.includes('node_modules')});fs.cpSync(path.join(root,'alignment'),path.join(stage,'alignment'),{recursive:true});
+const repair=stageWindowsRepair(path.join(stage,'alignment/runtime/Lib/site-packages'),path.join(base,'alignment/runtime/python.exe'));
+if(crypto.createHash('sha256').update(fs.readFileSync(path.join(stage,'alignment/runtime/Lib/site-packages/torch/__init__.py'))).digest('hex')!==repair.torchInitSha256)throw Error('Windows repair requires the matching PyTorch base');
+execFileSync(path.join(stage,'alignment/runtime/python.exe'),['-I','-B','-c','import torch,torchaudio,stable_whisper; from torch.utils.data import DataLoader; assert torch.ones(1).sum().item()==1'],{stdio:'inherit'});
 await rcedit(path.join(stage,'SoundSync.exe'),{icon:path.join(root,'app/icon.ico'),'version-string':{ProductName:'SoundSync',FileDescription:'SoundSync Music Player',OriginalFilename:'SoundSync.exe',InternalName:'SoundSync',CompanyName:'SoundSync'},'file-version':'1.2.0','product-version':'1.2.0'});
 fs.writeFileSync(path.join(stage,'ПРОЧИТАЙ МЕНЯ.txt'),'SoundSync 1.2.0 — Windows x64\r\nРаспакуй архив целиком и запусти SoundSync.exe. Python, FFmpeg и модель синхронизации включены.\r\nПользовательские данные хранятся в Data рядом с программой. При обновлении сохрани Data.\r\nРелизы: https://github.com/Genovide/SoundSync/releases\r\n');
 fs.copyFileSync('scripts/Create-SoundSync-Shortcuts.bat',path.join(stage,'Create-SoundSync-Shortcuts.bat'));

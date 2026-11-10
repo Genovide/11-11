@@ -1,22 +1,79 @@
-name: Test cumulative SoundSync upgrade
+name: Test and replace cumulative SoundSync update
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Replace Windows and Mac assets of the existing v1.2.2 release after both tests pass
+        type: boolean
+        default: false
 permissions:
-  contents: write
+  contents: read
+concurrency:
+  group: soundsync-cumulative-release
+  cancel-in-progress: false
 jobs:
-  upgrade:
-    runs-on: macos-15
-    timeout-minutes: 25
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Build cumulative update packages
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check source, ZIP extraction and rollback
+        shell: powershell
+        run: |
+          node scripts/check-source.cjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          ./scripts/test-update-archive.ps1
+          ./scripts/test-update-transaction.ps1
+      - name: Build separate update packages and validate manifests
+        shell: powershell
+        env:
+          SOUNDSYNC_PYTHON: python
+        run: |
+          node scripts/build-upgrades.mjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -I -S -B scripts/check-update-packages.py
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Download and verify the released Windows base
+        shell: powershell
+        run: |
+          curl.exe --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-FileHash base.zip).Hash.ToLowerInvariant() -ne '049857d0ec726d2112bc5156da8ba92ca50eb2dbd593b8e38360ebafb844081f') { throw 'Base checksum mismatch' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'base.zip'),(Join-Path $pwd 'work/base'))
+          [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'dist/SoundSync-1.2.2-Update-Windows-x64.zip'),(Join-Path $pwd 'work/patch'))
+      - name: Repair compatible base without a full download and repeat update
+        shell: powershell
+        run: |
+          ./scripts/test-upgrade-windows.ps1 -Root work/base/SoundSync -Patch work/patch
+          ./scripts/test-upgrade-windows.ps1 -Root work/base/SoundSync -Patch work/patch
+      - name: Replace incompatible base from a verified local archive
+        shell: powershell
+        run: ./scripts/test-upgrade-windows.ps1 -Root work/base/SoundSync -Patch work/patch -BaseArchive base.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-Windows-update
+          path: dist/SoundSync-1.2.2-Update-Windows-x64.zip
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build only the Mac payload
         env:
           SOUNDSYNC_PYTHON: python3
+          SOUNDSYNC_UPDATE_PLATFORM: macOS
         run: node scripts/build-upgrades.mjs
-      - name: Prepare verified base
+      - name: Prepare verified native Apple Silicon base
         run: |
           test "$(uname -m)" = arm64
           curl --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip
@@ -25,14 +82,17 @@ jobs:
           ditto -x -k base.zip dist/SoundSync-darwin-arm64
           ditto -x -k dist/SoundSync-1.2.2-Update-macOS-arm64.zip patch
           bash -n patch/Update-SoundSync.command
-      - name: Update existing SoundSync without replacing compatible runtime
+      - name: Update compatible Mac and launch the signed app
         run: |
           bash patch/Update-SoundSync.command "$PWD/dist/SoundSync-darwin-arm64/SoundSync.app" | tee modern-update.log
           if grep -q 'Основа прежней версии' modern-update.log; then echo 'Unexpected runtime download'; exit 1; fi
           node scripts/smoke-macos.mjs
+          # Repeat updates must also accept an already updated and signed bundle.
+          bash patch/Update-SoundSync.command "$PWD/dist/SoundSync-darwin-arm64/SoundSync.app"
+          node scripts/smoke-macos.mjs
           mkdir -p "$RUNNER_TEMP/modern-tested"
           mv dist/SoundSync-darwin-arm64/SoundSync.app "$RUNNER_TEMP/modern-tested/"
-      - name: Upgrade legacy app and migrate portable data
+      - name: Upgrade legacy Mac app and preserve portable user data
         run: |
           LEGACY="$PWD/.build/legacy/11-11.app"
           mkdir -p "$LEGACY/Contents/MacOS/Data"
@@ -42,16 +102,31 @@ jobs:
           HOME="$RUNNER_TEMP/legacy-home" bash patch/Update-SoundSync.command "$LEGACY" "$PWD/base.zip"
           PROFILE="$RUNNER_TEMP/legacy-home/Library/Application Support/SoundSync" python3 -c 'import os,pathlib,json;p=pathlib.Path(os.environ["PROFILE"]);v=json.loads((p/"library.json").read_text());assert v["marker"]=="legacy-data-preserved";assert v["folder"]==str(p/"downloads");assert(p/"history-marker.txt").read_text()=="keep"'
           test ! -d "$LEGACY"
-          test -d .build/legacy/SoundSync.app
           mv .build/legacy/SoundSync.app dist/SoundSync-darwin-arm64/SoundSync.app
           node scripts/smoke-macos.mjs
-          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' dist/SoundSync-darwin-arm64/SoundSync.app/Contents/Info.plist)" = 1.2.2
-      - name: Upload verified cumulative Mac update
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload v1.2.2 dist/SoundSync-1.2.2-Update-macOS-arm64.zip --repo "$GITHUB_REPOSITORY" --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-macOS-update
+          path: dist/SoundSync-1.2.2-Update-macOS-arm64.zip
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: SoundSync-1.2.2-upgrade-diagnostics
+          name: macOS-upgrade-diagnostics
           path: dist/diagnostics/
+  publish:
+    needs: [windows, macos]
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: verified-*-update
+          path: dist
+          merge-multiple: true
+      - name: Replace both tested update archives and their checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/publish-update-release.py

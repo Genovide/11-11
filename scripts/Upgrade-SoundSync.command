@@ -14,9 +14,17 @@ if pgrep -x SoundSync >/dev/null || pgrep -x '11-11' >/dev/null; then echo 'По
 TARGET="$(dirname "$OLD")/SoundSync.app"
 if [ "$TARGET" != "$OLD" ] && [ -e "$TARGET" ]; then echo 'SoundSync.app уже существует рядом. Выбери его для обновления, чтобы не затронуть другую копию.'; exit 1; fi
 (cd "$HERE" && shasum -a 256 -c SHA256SUMS-payload.txt)
-WORK="$(mktemp -d "${TMPDIR:-/tmp}/soundsync-upgrade.XXXXXX")"
+WORK="$(mktemp -d "$(dirname "$OLD")/.soundsync-upgrade.XXXXXX")"
 BACKUP="${OLD%.app}-backup-$(date +%Y%m%d-%H%M%S).app"
-cleanup() { if [ ! -d "$TARGET" ] && [ ! -d "$OLD" ] && [ -d "$BACKUP" ]; then mv "$BACKUP" "$OLD"; fi; case "$WORK" in */soundsync-upgrade.*) rm -rf "$WORK" ;; esac; }
+REPLACED=false
+INSTALLED=false
+cleanup() {
+  if [ "$REPLACED" = true ] && [ "$INSTALLED" = false ]; then
+    if [ -e "$TARGET" ]; then mv "$TARGET" "$WORK/failed.app" || return; fi
+    mv "$BACKUP" "$OLD" || return
+  fi
+  case "$WORK" in */.soundsync-upgrade.*) rm -rf "$WORK" ;; esac
+}
 trap cleanup EXIT
 COMPATIBLE=true
 FRAMEWORK="$OLD/Contents/Frameworks/Electron Framework.framework/Versions/A/Resources/Info.plist"
@@ -32,9 +40,10 @@ if [ "$COMPATIBLE" = true ]; then
   ditto "$OLD" "$WORK/SoundSync.app"
 else
   echo 'Основа прежней версии будет обновлена автоматически. Загружаются необходимые компоненты.'
-  if [ -n "$BASE_ARCHIVE" ]; then cp "$BASE_ARCHIVE" "$WORK/base.zip"; else curl --fail --location --retry 3 -o "$WORK/base.zip" 'https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip'; fi
-  echo 'e9af35535b3fef181ae8af9ba3419cdd37eda49b1d8b7877eddb55c308468867  base.zip' | (cd "$WORK" && shasum -a 256 -c -)
-  ditto -x -k "$WORK/base.zip" "$WORK"
+  ARCHIVE="$BASE_ARCHIVE"
+  if [ -z "$ARCHIVE" ]; then ARCHIVE="$WORK/base.zip"; curl --fail --location --retry 3 -o "$WORK/base.zip" 'https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip'; fi
+  [ "$(shasum -a 256 "$ARCHIVE" | cut -d ' ' -f 1)" = 'e9af35535b3fef181ae8af9ba3419cdd37eda49b1d8b7877eddb55c308468867' ] || { echo 'Контрольная сумма основы не совпала'; exit 1; }
+  ditto -x -k "$ARCHIVE" "$WORK"
 fi
 # Replace the entire app source, preserving only the verified native dependencies.
 mv "$WORK/SoundSync.app/Contents/Resources/app/node_modules" "$WORK/node_modules"
@@ -42,6 +51,9 @@ rm -rf "$WORK/SoundSync.app/Contents/Resources/app"
 ditto "$HERE/payload/resources/app" "$WORK/SoundSync.app/Contents/Resources/app"
 mv "$WORK/node_modules" "$WORK/SoundSync.app/Contents/Resources/app/node_modules"
 ditto "$HERE/payload/alignment" "$WORK/SoundSync.app/Contents/Resources/alignment"
+# Check the relocated native engine before signing and before replacing the app.
+echo 'Проверяется запуск движка синхронизации…'
+"$WORK/SoundSync.app/Contents/Resources/alignment/runtime/bin/python3.12" -I -B -c 'import torch,torchaudio,stable_whisper,imageio_ffmpeg; from torch.utils.data import DataLoader; from demucs.pretrained import get_model; assert torch.ones(1).sum().item()==1; print("Python/PyTorch OK")'
 /usr/libexec/PlistBuddy -c 'Set CFBundleShortVersionString 1.2.2' "$WORK/SoundSync.app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c 'Set CFBundleVersion 1.2.2' "$WORK/SoundSync.app/Contents/Info.plist"
 codesign --force --deep --sign - "$WORK/SoundSync.app"
@@ -77,7 +89,9 @@ fi
 codesign --verify --deep --strict "$WORK/SoundSync.app"
 [ ! -e "$BACKUP" ] || { echo 'Резервная копия уже существует, повтори через секунду'; exit 1; }
 mv "$OLD" "$BACKUP"
+REPLACED=true
 mv "$WORK/SoundSync.app" "$TARGET"
+INSTALLED=true
 echo "SoundSync 1.2.2 установлен: $TARGET"
 echo "Резервная копия: $BACKUP"
 echo 'Музыка, медиатека, история и настройки сохранены. Заверения Apple по-прежнему нет.'

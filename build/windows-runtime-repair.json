@@ -1,0 +1,273 @@
+{
+  "description": "Restore Python data packages omitted from the released Windows base. Files match the installed wheel RECORD hashes (including CRLF).",
+  "upstream": "https://github.com/pytorch/pytorch/tree/d0f2af8b66b20da4baa50644c0cd3f887a2eae2e",
+  "torchInitSha256": "2399a5577a0292fb99cbf13e859fc17e5c51614d5536d9c67352fbc12be748ed",
+  "archiveSha256": "112ba23fde50ea94c2fc91d11661e3b202fe92c43599dfc0f607eb101682079e",
+  "files": [
+    {
+      "path": "torch/distributed/elastic/utils/data/__init__.py",
+      "size": 354,
+      "sha256": "cf422e7de84af577344f3f79188cc412d41777fd2d130b7ade1ec55d44522ee4"
+    },
+    {
+      "path": "torch/distributed/elastic/utils/data/cycling_iterator.py",
+      "size": 1700,
+      "sha256": "a8df780d980c223870da7e9343b01b3d11e64a27fc7e12edec063bcad10190c2"
+    },
+    {
+      "path": "torch/distributed/elastic/utils/data/elastic_distributed_sampler.py",
+      "size": 3169,
+      "sha256": "5b94a2644db665b3faa6704f0cf5b59d8620bd717dce86a3d1b5d84f604071d7"
+    },
+    {
+      "path": "torch/testing/_internal/data/__init__.py",
+      "size": 23,
+      "sha256": "0e269a0b8c0b63e9337aa3d608454a092cce6bad55962dfc92e1b61dde74c777"
+    },
+    {
+      "path": "torch/testing/_internal/data/network1.py",
+      "size": 179,
+      "sha256": "a2e8b8a9254e2f7f73d43ab2456d146beae1a42d707841a1413a597f2e5d00a8"
+    },
+    {
+      "path": "torch/testing/_internal/data/network2.py",
+      "size": 210,
+      "sha256": "6c3acb1074eaa196062d2b7fc17804fc2016d07e9d441d4faabdca050aa4d6ec"
+    },
+    {
+      "path": "torch/utils/data/__init__.py",
+      "size": 1779,
+      "sha256": "6eb99ca51eee101e19a54b26498a01c5df69cda4b3b097bb82de1e00d095276b"
+    },
+    {
+      "path": "torch/utils/data/_utils/__init__.py",
+      "size": 1660,
+      "sha256": "435cc7311cfd493ef2315f5e63bd66b4eee859836c4bb27f043cd7a989cbff5c"
+    },
+    {
+      "path": "torch/utils/data/_utils/collate.py",
+      "size": 16337,
+      "sha256": "09a39cc8cfcffb217a31af4650a352d8f60ce42d98686233a468b7bf7bc9906f"
+    },
+    {
+      "path": "torch/utils/data/_utils/fetch.py",
+      "size": 2067,
+      "sha256": "a39732f46fbad35e6d138c587791ea4f45018eecd79179b848f0abe3df8ecd84"
+    },
+    {
+      "path": "torch/utils/data/_utils/pin_memory.py",
+      "size": 4250,
+      "sha256": "0cf19a30285d893cbfc5d08258c5d7351b7a1eff2a6c9f8d96d635cc93510795"
+    },
+    {
+      "path": "torch/utils/data/_utils/signal_handling.py",
+      "size": 3344,
+      "sha256": "0eca16b9c4f37fcffef1ec916d372655b268d15a8140e833e8b112ecf4e8c8c1"
+    },
+    {
+      "path": "torch/utils/data/_utils/worker.py",
+      "size": 15313,
+      "sha256": "ec3cd83a4481167bab22d722c9c89a80570694641b6a515a2fd58d0a4cd67ad6"
+    },
+    {
+      "path": "torch/utils/data/backward_compatibility.py",
+      "size": 328,
+      "sha256": "3a19b9e92425fdc23c82af9f291f19f740dc5b3b89f81da6ea95d6ec5a2db1ec"
+    },
+    {
+      "path": "torch/utils/data/dataloader.py",
+      "size": 83114,
+      "sha256": "8685561ded9e3c7d75cd4184694ad3149992a690cba0bcad5e0d6f20ab81c8b6"
+    },
+    {
+      "path": "torch/utils/data/datapipes/__init__.py",
+      "size": 89,
+      "sha256": "2f094721c71ee959cf7b5ec4647044917e9ee7afce22a3be8074e2f25e5b52b5"
+    },
+    {
+      "path": "torch/utils/data/datapipes/_decorator.py",
+      "size": 7971,
+      "sha256": "aa34ef49b65c8f894ddd4fcee70141c58bbb225aa8ac15289269ccf1c4212c69"
+    },
+    {
+      "path": "torch/utils/data/datapipes/_hook_iterator.py",
+      "size": 12252,
+      "sha256": "5f3289b5d9922a539fa2eface4e8843bf1151eb03ab68819657fdbd4df84c4ad"
+    },
+    {
+      "path": "torch/utils/data/datapipes/_typing.py",
+      "size": 16775,
+      "sha256": "94ef4cebcc8ce12cf73d94331d640f5522b568cad055c02db43f90503516f83e"
+    },
+    {
+      "path": "torch/utils/data/datapipes/dataframe/__init__.py",
+      "size": 390,
+      "sha256": "4c4341112bfc7f4744f34b5148beb7d6c98309c467e175b11eb7141aa701448b"
+    },
+    {
+      "path": "torch/utils/data/datapipes/dataframe/dataframe_wrapper.py",
+      "size": 3416,
+      "sha256": "efd6a1a2170aaa262db856f4859589a1c50fee72bc6ed36cd45f5f291d889555"
+    },
+    {
+      "path": "torch/utils/data/datapipes/dataframe/dataframes.py",
+      "size": 14502,
+      "sha256": "fe052f125ea7d4dfe9713ec6d6eea7c8641c84d7d570b019407e69e79935dd88"
+    },
+    {
+      "path": "torch/utils/data/datapipes/dataframe/datapipes.py",
+      "size": 4791,
+      "sha256": "95c9f91fdfd31131b5b823235382f7868714deeb1edf4da7be8e890bdf70c499"
+    },
+    {
+      "path": "torch/utils/data/datapipes/dataframe/structures.py",
+      "size": 684,
+      "sha256": "bc8ba1f21e068ff996672e3d12c7d82f223592137636265c30c8834c8603c98a"
+    },
+    {
+      "path": "torch/utils/data/datapipes/datapipe.py",
+      "size": 17695,
+      "sha256": "07652b35df9a52391c2c22f4a784404aa066564ef0563c55f93a74397e2e46ae"
+    },
+    {
+      "path": "torch/utils/data/datapipes/gen_pyi.py",
+      "size": 12134,
+      "sha256": "813dd87406ed36dcb045e03da857ae3a3bed32a78dd4ff1c96e522f079c568f9"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/__init__.py",
+      "size": 1928,
+      "sha256": "05670156ab1a4db94b228038b9a1d8e694afcccaff210a848f109b6ecd51f28a"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/callable.py",
+      "size": 9358,
+      "sha256": "797021dac4c688f25c81ff277b9e8f5590d10ce5c977fe60f3895eccd6993b0a"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/combinatorics.py",
+      "size": 6752,
+      "sha256": "bda9237f8258c0b1601ff2ecd7050052d2f622b1f55f5ad937ab4454ef71569b"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/combining.py",
+      "size": 28839,
+      "sha256": "646a7c4de58954023143d64f9fd946a2ee9dc8f9c23f4153b5886ca57ebce3a2"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/filelister.py",
+      "size": 2621,
+      "sha256": "a34ba66e2de6a10dd7200952fe9718e63e3437d853fefbfeff1e3765eb372493"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/fileopener.py",
+      "size": 2968,
+      "sha256": "697f96796bfecab69b7a547fe17114ed11b3bf52aeeb9571711a8c7d9afe0f02"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/grouping.py",
+      "size": 12716,
+      "sha256": "ad3313af929b330b46b4b29dc7587b9968b3eff39079b5f4499bcd27acbdde36"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/routeddecoder.py",
+      "size": 2802,
+      "sha256": "3c49c1a2c49db7323e1affc52142e2fb0b61e06117617eaba1b50485bbfec074"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/selecting.py",
+      "size": 3410,
+      "sha256": "1f19640dfd051d142bfe149a95d0fdafd21b39959c8e145f9ed6cbc8142b3138"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/sharding.py",
+      "size": 3763,
+      "sha256": "250513d395ce1e466ead207b359f2385dd670cde86a237a1dc8280066444a126"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/streamreader.py",
+      "size": 1582,
+      "sha256": "b8a00580f0ff496cb6174cc3d971c1fb8eb86c3e1e8d6210c6aee4ac84982a8b"
+    },
+    {
+      "path": "torch/utils/data/datapipes/iter/utils.py",
+      "size": 2169,
+      "sha256": "6d691fa1fdd8833bf80d6db5e38089d36d3d5bf2ab7c748c9e00fc5c7b482093"
+    },
+    {
+      "path": "torch/utils/data/datapipes/map/__init__.py",
+      "size": 734,
+      "sha256": "a78832f7aa93730f48dbf7a055ff3fa5b3f6f13bc1de772d6c3c4bb5956b4825"
+    },
+    {
+      "path": "torch/utils/data/datapipes/map/callable.py",
+      "size": 2000,
+      "sha256": "6b48e31bc07a8221a0a0254fb04df6c73a840a8be5a10dc94b66f884c287cb9f"
+    },
+    {
+      "path": "torch/utils/data/datapipes/map/combinatorics.py",
+      "size": 4398,
+      "sha256": "9c89ee1a201bf6d76533e714a13468705c7ba93f0ff15ccb1a145cce92dbb302"
+    },
+    {
+      "path": "torch/utils/data/datapipes/map/combining.py",
+      "size": 4101,
+      "sha256": "6f78fb89adc6bf4b0222e26801efe86899fc2d311ca5e281503005ce331bfec2"
+    },
+    {
+      "path": "torch/utils/data/datapipes/map/grouping.py",
+      "size": 2607,
+      "sha256": "97ed771d9399a525a7b0fbafd121d1d6e9eae531f26c56412c6ad185e59945c8"
+    },
+    {
+      "path": "torch/utils/data/datapipes/map/utils.py",
+      "size": 1873,
+      "sha256": "4de5cbeafdaf4315f0d76e122a7bcefbb1a9eb877d3faea60d3546a4b4b261c6"
+    },
+    {
+      "path": "torch/utils/data/datapipes/utils/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "torch/utils/data/datapipes/utils/common.py",
+      "size": 14271,
+      "sha256": "9713d38264ade0b3fd69c7f070673f5bd907c614382ebd657873d603514ad9c7"
+    },
+    {
+      "path": "torch/utils/data/datapipes/utils/decoder.py",
+      "size": 12510,
+      "sha256": "5b2e314753d120ca4389daa7cc66c6dfc30609a96834c902e1dd103f2204454c"
+    },
+    {
+      "path": "torch/utils/data/datapipes/utils/snapshot.py",
+      "size": 3210,
+      "sha256": "8f53f6d33aafc64703f260c17855caddb93a279f308fe1f6efa4fba59297bcf2"
+    },
+    {
+      "path": "torch/utils/data/dataset.py",
+      "size": 21464,
+      "sha256": "f2776f0f8970c3e0ae39e0f2da6eda6ea91fff263b152743673d973f2bcc0b54"
+    },
+    {
+      "path": "torch/utils/data/distributed.py",
+      "size": 6608,
+      "sha256": "b23d74875ab44e9ffa07f3bce95b879b8aac3e2e8c0c3b2102730bff4d29bf1e"
+    },
+    {
+      "path": "torch/utils/data/graph.py",
+      "size": 6094,
+      "sha256": "db2a68e92c7fbcbb7ab7f945578452418d99a06d88e4edf4a28eda78840cff17"
+    },
+    {
+      "path": "torch/utils/data/graph_settings.py",
+      "size": 5729,
+      "sha256": "8fc315b83c8092fe212924e83e7d6b5d0a76d609da95110a026e49bce72f8a31"
+    },
+    {
+      "path": "torch/utils/data/sampler.py",
+      "size": 13092,
+      "sha256": "cb6379f5d3cf733faa220ac49b9f4d729567ec3c2639a71fd9fd7de92adcd420"
+    }
+  ]
+}
