@@ -2,7 +2,7 @@
 <img src="build/icon.png" width="128" alt="SoundSync">
 <h1>SoundSync</h1>
 <p>Твоя музыка. Твои тексты. Твой ритм.</p>
-<p>Музыкальный плеер для Windows и macOS Apple Silicon. На iPhone — веб-приложение SoundSync Pocket.</p>
+<p>Музыкальный плеер для Windows и macOS Apple Silicon. Мобильная версия — веб-приложение SoundSync Pocket.</p>
 <a href="#скачать-soundsync">Windows и Mac</a> · <a href="#soundsync-на-iphone">Установить на iPhone</a> · <a href="https://github.com/Genovide/SoundSync/issues">Сообщить о проблеме</a>
 </div>
 
