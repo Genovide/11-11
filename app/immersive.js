@@ -153,6 +153,7 @@ viewSwitch.addEventListener('keydown', (event) => {
   next.focus();
 });
 let visualPreset = [
+    'rays',
     'mandala',
     'cover',
     'starburst',
@@ -161,7 +162,7 @@ let visualPreset = [
     'flowfield',
   ].includes(localStorage.getItem('visual-preset'))
     ? localStorage.getItem('visual-preset')
-    : 'mandala',
+    : 'rays',
   visualTick = 0,
   visualPaints = 0;
 function updateImmersive() {
@@ -241,6 +242,7 @@ const response = new AudioResponse();
 const mandalaBackground = new MandalaBackground();
 const milkdropBackground = new MilkdropBackground();
 const importedSceneRenderer = new ImportedSceneRenderer();
+const raysScene = new RaysScene();
 const reactionLabel = node('label', 'reaction-control'),
   reactionText = node('span', '', 'Реакция'),
   reactionSlider = node('input');
@@ -260,7 +262,8 @@ function drawVisualizer(ms) {
     document.hidden ||
     immersive.classList.contains('hidden') ||
     visualPanel.classList.contains('hidden') ||
-    ms - visualTick < 32
+    // Сцены на Canvas 2D рисуются ~30 раз в секунду; «Лучи» считает видеокарта — в каждом кадре.
+    ms - visualTick < (visualPreset === 'rays' ? 4 : 32)
   )
     return;
   visualTick = ms;
@@ -323,6 +326,20 @@ function drawVisualizer(ms) {
     config.visualizer.color2 = sceneColors[1];
     config.visualizer.colorMode = 'theme';
   }
+  if (
+    visualPreset === 'rays' &&
+    raysScene.draw(
+      vg,
+      visualCanvas.width,
+      visualCanvas.height,
+      response,
+      palette,
+      dt,
+      !!animate,
+      effect === 1 ? 0.65 : 1
+    )
+  )
+    return;
   if (visualPreset === 'mandala') {
     vg.save();
     vg.setTransform(1, 0, 0, 1, 0, 0);
@@ -432,6 +449,7 @@ requestAnimationFrame(drawVisualizer);
 // Put the palette switch with the top controls; the canvas fills the entire background.
 listeningControls.append(visualMode);
 const visualOptions = {
+  rays: 'Лучи',
   mandala: 'Mandala Drop',
   cover: 'Волны · цвет обложки',
   starburst: 'Огненные лучи',
@@ -450,6 +468,7 @@ function refreshVisualMode() {
     visualPreset === 'milkdrop' || visualPreset === 'flowfield'
   );
   immersive.classList.toggle('mandala-layout', visualPreset === 'mandala');
+  immersive.classList.toggle('rays-layout', visualPreset === 'rays');
   immersive.classList.toggle('starburst-layout', visualPreset === 'starburst');
   immersive.classList.toggle('bars-layout', visualPreset === 'centerbars');
   visualMode.value = visualPreset;
@@ -492,9 +511,9 @@ window.runImmersiveTest = async () => {
     visualBounds = visualCanvas.getBoundingClientRect();
   checks.noCoverOverlap = artBounds.right <= visualBounds.left;
   checks.visualizerSpace = visualBounds.width > 400 && visualBounds.height > 300;
-  checks.dropdown = visualMode.tagName === 'SELECT' && visualMode.options.length === 6;
+  checks.dropdown = visualMode.tagName === 'SELECT' && visualMode.options.length === 7;
   checks.noCyanOption = ![...visualMode.options].some((o) => o.value === 'cyan');
-  for (const key of ['starburst', 'centerbars', 'cover', 'milkdrop', 'flowfield']) {
+  for (const key of ['rays', 'starburst', 'centerbars', 'cover', 'milkdrop', 'flowfield']) {
     visualMode.value = key;
     visualMode.dispatchEvent(new Event('change'));
     await new Promise((r) => setTimeout(r, 500));
@@ -506,7 +525,8 @@ window.runImmersiveTest = async () => {
         !!milkdropBackground.mode?.preset &&
         !milkdropBackground.mode?.error;
       checks.milkdropFrames = milkdropBackground.mode?.frameNo > 10;
-    } else if (key !== 'cover') checks[key + 'Rendered'] = importedSceneRenderer.frames[key] > 0;
+    } else if (key === 'rays') checks.raysRendered = raysScene.frames > 10 && !raysScene.error;
+    else if (key !== 'cover') checks[key + 'Rendered'] = importedSceneRenderer.frames[key] > 0;
   }
   visualMode.value = 'mandala';
   visualMode.dispatchEvent(new Event('change'));
