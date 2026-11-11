@@ -42,6 +42,12 @@ function persistUiPreferences(event, patch) {
     patch.volume <= 1
   )
     uiPreferences.volume = patch.volume;
+  if (
+    typeof patch.lyricsOffsetMs === 'number' &&
+    Number.isInteger(patch.lyricsOffsetMs) &&
+    Math.abs(patch.lyricsOffsetMs) <= 2000
+  )
+    uiPreferences.lyricsOffsetMs = patch.lyricsOffsetMs;
   if (['library', 'soundcloud'].includes(patch.randomSourceChoice))
     uiPreferences.randomSourceChoice = patch.randomSourceChoice;
   if (Array.isArray(patch.playedTrackKeys))

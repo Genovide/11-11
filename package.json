@@ -13,7 +13,8 @@
     "test:interface": "node scripts/run-interface-test.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:lyrics": "node scripts/test-lyrics-timing.cjs"
   },
   "devDependencies": {
     "@electron/packager": "^18.3.6",
