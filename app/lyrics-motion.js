@@ -15,8 +15,28 @@ function outputDelay() {
   const delay = (ctx.baseLatency || 0) + (ctx.outputLatency || 0);
   return Number.isFinite(delay) ? Math.min(0.6, Math.max(0, delay)) : 0;
 }
+// audio.currentTime обновляется неровно: между кадрами по 16,7 мс он сдвигается то на 0,
+// то на 60 мс, и заливка слов дёргается. Ведём собственные часы по performance.now()
+// и мягко подтягиваем их к позиции звука; при перемотке или паузе сразу встаём на неё.
+let clockValue = 0,
+  clockWall = 0;
+function smoothMediaTime() {
+  const raw = audio.currentTime,
+    now = performance.now();
+  if (now === clockWall) return clockValue;
+  if (audio.paused || audio.seeking || audio.readyState < 3 || !clockWall) {
+    clockValue = raw;
+    clockWall = now;
+    return raw;
+  }
+  const predicted = clockValue + ((now - clockWall) / 1000) * (audio.playbackRate || 1),
+    error = raw - predicted;
+  clockValue = Math.abs(error) > 0.25 ? raw : Math.max(clockValue, predicted + error * 0.08);
+  clockWall = now;
+  return clockValue;
+}
 function lyricTime() {
-  return Math.max(0, audio.currentTime - outputDelay() + lyricsOffset);
+  return Math.max(0, smoothMediaTime() - outputDelay() + lyricsOffset);
 }
 function setLyricsOffset(seconds) {
   lyricsOffset = Math.round(Math.max(-2, Math.min(2, seconds)) * 20) / 20;
@@ -218,8 +238,8 @@ function paintLyricWords(time) {
 }
 function animateLyrics(now) {
   requestAnimationFrame(animateLyrics);
-  if (document.hidden || now - lastLyricFrame < 16 || !lyricBox.classList.contains('synced'))
-    return;
+  // Рисуем в каждом кадре дисплея: прежний порог 16 мс на 120/144 Гц давал неровный шаг.
+  if (document.hidden || now - lastLyricFrame < 4 || !lyricBox.classList.contains('synced')) return;
   const dt = Math.min(50, now - lastLyricFrame || 16);
   lastLyricFrame = now;
   if (!lyricBox.classList.contains('hidden') && lyricBox.clientHeight) {

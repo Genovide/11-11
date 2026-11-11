@@ -86,6 +86,8 @@ function setHalo(group, value) {
   if (group.halo === value) return;
   group.halo = value;
   group.element.style.setProperty('--word-halo', value);
+  // Фильтр свечения дорогой: держим его только на словах, которые сейчас светятся.
+  group.element.classList.toggle('glow', Number(value) > 0.001);
 }
 function paintLyricLetters(time) {
   const motion = effect && !reduced;

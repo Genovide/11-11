@@ -51,8 +51,8 @@
     text-shadow: none !important;
   }
 }
-.letter-timed .lyric-word,
-.letter-decorative .lyric-cluster {
+.letter-timed .lyric-word.glow,
+.letter-decorative .lyric-cluster.glow {
   filter: drop-shadow(0 0 0.12em rgb(255 255 255 / calc(var(--word-halo, 0) * 0.28)))
     drop-shadow(0 0 0.36em rgb(230 245 255 / calc(var(--word-halo, 0) * 0.18))) !important;
 }
