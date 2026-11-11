@@ -1,1 +1,31 @@
-.identity-dialog{width:min(580px,90vw);max-height:90vh;overflow:auto}.identity-dialog .identity-field{display:grid;gap:7px;font-size:13px;color:#bcbab0;margin:15px 0}.identity-dialog .editor-input{min-height:0;height:auto;padding:12px 14px;width:100%;font:15px 'Segoe UI',sans-serif;color:#f5f3eb;border:1px solid #ffffff24;border-radius:9px}.identity-dialog .editor-actions{flex-wrap:wrap}.identity-dialog .sc-hint{line-height:1.6;overflow-wrap:anywhere}
+.identity-dialog {
+  width: min(580px, 90vw);
+  max-height: 90vh;
+  overflow: auto;
+}
+.identity-dialog .identity-field {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  color: #bcbab0;
+  margin: 15px 0;
+}
+.identity-dialog .editor-input {
+  min-height: 0;
+  height: auto;
+  padding: 12px 14px;
+  width: 100%;
+  font:
+    15px 'Segoe UI',
+    sans-serif;
+  color: #f5f3eb;
+  border: 1px solid #ffffff24;
+  border-radius: 9px;
+}
+.identity-dialog .editor-actions {
+  flex-wrap: wrap;
+}
+.identity-dialog .sc-hint {
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}

@@ -1,4 +1,207 @@
-.titlebar .wordmark{gap:11px}.titlebar .brand-logo{width:38px;height:29px;object-fit:contain}.titlebar .brand-name{font-family:'Segoe UI',sans-serif;font-size:21px;font-weight:750;letter-spacing:-1px;color:#f5f3eb;line-height:1}.titlebar .brand-name em{font-style:normal;font-weight:450;color:#d8d7cc}
-.hero .orb-scene{width:238px;height:280px;right:1px;top:13px;gap:24px;overflow:visible;isolation:isolate}.hero .orb{width:186px;height:186px;border-radius:50%;border:1px solid #ffd62936;transform:none;overflow:visible;background:radial-gradient(ellipse at 32% 12%,#343328 0%,#1a1b16 44%,#10110e 76%);box-shadow:inset 0 2px 2px #ffffff0e,inset 0 -8px 22px #0008,0 15px 38px #0005,0 0 0 7px #ffd62904;transition:transform .3s,border-color .3s,box-shadow .3s}.hero .orb::before{display:block;content:'';position:absolute;inset:-14px;border-radius:50%;border:1px solid #ffd62918;box-shadow:none;background:conic-gradient(from 20deg,transparent 0deg 24deg,#ffd629bb 26deg 57deg,transparent 60deg 211deg,#ffd62977 214deg 244deg,transparent 247deg);mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1.5px));transform:none;pointer-events:none}.hero .orb::after{display:block;content:'';position:absolute;inset:9px;border-radius:50%;border:1px solid #ffffff09;background:none;transform:none;pointer-events:none}.hero .orb-core{width:119px;height:81px;transform:none;background:url('brand.svg') center/contain no-repeat;filter:drop-shadow(0 3px 10px #ffd62916);margin-top:-11px;z-index:1}.hero .orb .orb-label{display:block;position:absolute;bottom:30px;left:0;right:0;font:600 8px 'Segoe UI',sans-serif;letter-spacing:4px;text-align:center;color:#b9a958;padding-left:4px;z-index:1}.hero .orb:hover{transform:translateY(-3px);border-color:#ffd629aa;box-shadow:inset 0 2px 2px #ffffff12,inset 0 -8px 22px #0008,0 20px 42px #0006,0 0 35px #ffd6290e,0 0 0 7px #ffd62907}.hero .orb:hover .orb-core{filter:drop-shadow(0 0 12px #ffd62924)}.hero .wave-orb-caption{font:600 9px 'Segoe UI',sans-serif;letter-spacing:2px;line-height:1.6;color:#b9aa70}.wave-playing .hero .orb{border-color:#ffd629a0;box-shadow:inset 0 2px 2px #ffffff10,0 0 38px #ffd62916,0 0 0 7px #ffd62907}.wave-playing .hero .orb::before{animation:soundsync-orbit 18s linear infinite}.wave-playing .hero .orb .orb-label{color:#ffd629}.wave-playing .hero .orb-core{filter:drop-shadow(0 0 14px #ffd62935)}
-.flat-theme .hero .orb{background:#191a16;box-shadow:inset 0 1px #ffffff0a,0 0 0 7px #ffd62904}.flat-theme .hero .orb::before{background:none;border-color:#ffd62924;mask:none;border-left-color:#ffd629aa;border-right-color:#ffd62966}.flat-theme .hero .orb::after{display:block;background:none}.flat-theme .hero .orb:hover{background:#1d1e18;box-shadow:inset 0 1px #ffffff0c,0 0 0 7px #ffd62908}.flat-theme .hero .orb-core{filter:none}
-@keyframes soundsync-orbit{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.wave-playing .hero .orb::before{animation:none}.hero .orb{transition:none}}@media(max-width:1200px){.hero .orb-scene{width:190px;right:-5px;top:23px;height:250px;gap:22px}.hero .orb{width:154px;height:154px}.hero .orb-core{width:99px;height:69px}.hero .orb .orb-label{bottom:23px;font-size:7px}.hero .wave-orb-caption{font-size:8px;letter-spacing:1.3px}.titlebar .brand-name{font-size:20px}}
+.titlebar .wordmark {
+  gap: 11px;
+}
+.titlebar .brand-logo {
+  width: 38px;
+  height: 29px;
+  object-fit: contain;
+}
+.titlebar .brand-name {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -1px;
+  color: #f5f3eb;
+  line-height: 1;
+}
+.titlebar .brand-name em {
+  font-style: normal;
+  font-weight: 450;
+  color: #d8d7cc;
+}
+.hero .orb-scene {
+  width: 238px;
+  height: 280px;
+  right: 1px;
+  top: 13px;
+  gap: 24px;
+  overflow: visible;
+  isolation: isolate;
+}
+.hero .orb {
+  width: 186px;
+  height: 186px;
+  border-radius: 50%;
+  border: 1px solid #ffd62936;
+  transform: none;
+  overflow: visible;
+  background: radial-gradient(ellipse at 32% 12%, #343328 0%, #1a1b16 44%, #10110e 76%);
+  box-shadow:
+    inset 0 2px 2px #ffffff0e,
+    inset 0 -8px 22px #0008,
+    0 15px 38px #0005,
+    0 0 0 7px #ffd62904;
+  transition:
+    transform 0.3s,
+    border-color 0.3s,
+    box-shadow 0.3s;
+}
+.hero .orb::before {
+  display: block;
+  content: '';
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1px solid #ffd62918;
+  box-shadow: none;
+  background: conic-gradient(
+    from 20deg,
+    transparent 0deg 24deg,
+    #ffd629bb 26deg 57deg,
+    transparent 60deg 211deg,
+    #ffd62977 214deg 244deg,
+    transparent 247deg
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  transform: none;
+  pointer-events: none;
+}
+.hero .orb::after {
+  display: block;
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  border: 1px solid #ffffff09;
+  background: none;
+  transform: none;
+  pointer-events: none;
+}
+.hero .orb-core {
+  width: 119px;
+  height: 81px;
+  transform: none;
+  background: url('brand.svg') center/contain no-repeat;
+  filter: drop-shadow(0 3px 10px #ffd62916);
+  margin-top: -11px;
+  z-index: 1;
+}
+.hero .orb .orb-label {
+  display: block;
+  position: absolute;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  font:
+    600 8px 'Segoe UI',
+    sans-serif;
+  letter-spacing: 4px;
+  text-align: center;
+  color: #b9a958;
+  padding-left: 4px;
+  z-index: 1;
+}
+.hero .orb:hover {
+  transform: translateY(-3px);
+  border-color: #ffd629aa;
+  box-shadow:
+    inset 0 2px 2px #ffffff12,
+    inset 0 -8px 22px #0008,
+    0 20px 42px #0006,
+    0 0 35px #ffd6290e,
+    0 0 0 7px #ffd62907;
+}
+.hero .orb:hover .orb-core {
+  filter: drop-shadow(0 0 12px #ffd62924);
+}
+.hero .wave-orb-caption {
+  font:
+    600 9px 'Segoe UI',
+    sans-serif;
+  letter-spacing: 2px;
+  line-height: 1.6;
+  color: #b9aa70;
+}
+.wave-playing .hero .orb {
+  border-color: #ffd629a0;
+  box-shadow:
+    inset 0 2px 2px #ffffff10,
+    0 0 38px #ffd62916,
+    0 0 0 7px #ffd62907;
+}
+.wave-playing .hero .orb::before {
+  animation: soundsync-orbit 18s linear infinite;
+}
+.wave-playing .hero .orb .orb-label {
+  color: #ffd629;
+}
+.wave-playing .hero .orb-core {
+  filter: drop-shadow(0 0 14px #ffd62935);
+}
+.flat-theme .hero .orb {
+  background: #191a16;
+  box-shadow:
+    inset 0 1px #ffffff0a,
+    0 0 0 7px #ffd62904;
+}
+.flat-theme .hero .orb::before {
+  background: none;
+  border-color: #ffd62924;
+  mask: none;
+  border-left-color: #ffd629aa;
+  border-right-color: #ffd62966;
+}
+.flat-theme .hero .orb::after {
+  display: block;
+  background: none;
+}
+.flat-theme .hero .orb:hover {
+  background: #1d1e18;
+  box-shadow:
+    inset 0 1px #ffffff0c,
+    0 0 0 7px #ffd62908;
+}
+.flat-theme .hero .orb-core {
+  filter: none;
+}
+@keyframes soundsync-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave-playing .hero .orb::before {
+    animation: none;
+  }
+  .hero .orb {
+    transition: none;
+  }
+}
+@media (max-width: 1200px) {
+  .hero .orb-scene {
+    width: 190px;
+    right: -5px;
+    top: 23px;
+    height: 250px;
+    gap: 22px;
+  }
+  .hero .orb {
+    width: 154px;
+    height: 154px;
+  }
+  .hero .orb-core {
+    width: 99px;
+    height: 69px;
+  }
+  .hero .orb .orb-label {
+    bottom: 23px;
+    font-size: 7px;
+  }
+  .hero .wave-orb-caption {
+    font-size: 8px;
+    letter-spacing: 1.3px;
+  }
+  .titlebar .brand-name {
+    font-size: 20px;
+  }
+}

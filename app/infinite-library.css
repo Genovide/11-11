@@ -1,1 +1,9 @@
-#more{height:1px;min-height:1px;width:100%;padding:0;margin:0;border:0;pointer-events:none}
+#more {
+  height: 1px;
+  min-height: 1px;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  pointer-events: none;
+}

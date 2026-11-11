@@ -1,1 +1,67 @@
-.lyrics-editor{width:min(720px,88vw);max-height:85vh;border:1px solid #ffffff25;border-radius:20px;background:#121c24;color:#eef6ee;padding:27px;box-shadow:0 30px 100px #0009}.lyrics-editor::backdrop{background:#03070bbf;backdrop-filter:blur(10px)}.lyrics-editor h2{margin:0 0 8px}.editor-track{color:#c1dfb3;font-size:14px;margin:0 0 13px}.editor-hint{font-size:13px;line-height:1.6;color:#91a399;margin-bottom:18px}.editor-input{display:block;width:100%;height:40vh;min-height:150px;resize:vertical;background:#080f16;border:1px solid #ffffff1a;border-radius:12px;padding:17px;color:#e6efe8;font:16px/1.65 'Bahnschrift','Segoe UI',sans-serif;outline:none}.editor-input:focus{border-color:#bcefa677}.editor-error{min-height:18px;font-size:12px;color:#f4a5a0;margin:10px 0}.editor-actions{display:flex;align-items:center;justify-content:flex-end;gap:10px}.editor-actions .quiet{margin-right:auto}.editor-actions button:disabled{opacity:.45;cursor:default}
+.lyrics-editor {
+  width: min(720px, 88vw);
+  max-height: 85vh;
+  border: 1px solid #ffffff25;
+  border-radius: 20px;
+  background: #121c24;
+  color: #eef6ee;
+  padding: 27px;
+  box-shadow: 0 30px 100px #0009;
+}
+.lyrics-editor::backdrop {
+  background: #03070bbf;
+  backdrop-filter: blur(10px);
+}
+.lyrics-editor h2 {
+  margin: 0 0 8px;
+}
+.editor-track {
+  color: #c1dfb3;
+  font-size: 14px;
+  margin: 0 0 13px;
+}
+.editor-hint {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #91a399;
+  margin-bottom: 18px;
+}
+.editor-input {
+  display: block;
+  width: 100%;
+  height: 40vh;
+  min-height: 150px;
+  resize: vertical;
+  background: #080f16;
+  border: 1px solid #ffffff1a;
+  border-radius: 12px;
+  padding: 17px;
+  color: #e6efe8;
+  font:
+    16px/1.65 'Bahnschrift',
+    'Segoe UI',
+    sans-serif;
+  outline: none;
+}
+.editor-input:focus {
+  border-color: #bcefa677;
+}
+.editor-error {
+  min-height: 18px;
+  font-size: 12px;
+  color: #f4a5a0;
+  margin: 10px 0;
+}
+.editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.editor-actions .quiet {
+  margin-right: auto;
+}
+.editor-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

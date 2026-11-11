@@ -1,16 +1,255 @@
-const lyricsIdentityKey=t=>{const m=TrackIdentity.derive(t);return JSON.stringify([m.title,m.artist,m.album,m.version])};
-const lyricsFinder=node('dialog','lyrics-finder'),finderQuery=node('input'),finderSearch=node('button','primary','Найти'),finderResults=node('div','finder-results'),finderPreview=node('pre','finder-preview'),finderStatus=node('p','sc-hint'),finderApply=node('button','primary','Выбрать этот текст'),finderClose=node('button','outline','Закрыть'),finderAutomatic=node('input'),finderAutoLabel=node('label','sc-check'),finderTitle=node('h2','','Поиск текстов · LRCLIB'),finderForm=node('form','sc-search'),finderBody=node('div','finder-body'),finderActions=node('div','editor-actions');
-let finderTarget=null,finderSelected=null,finderGeneration=0,autoLyricsTimer=null;const lyricsCandidates=new Map(),autoLyricsAttempted=new Set();
-finderQuery.placeholder='Исполнитель и название песни';finderQuery.maxLength=500;finderQuery.setAttribute('aria-label','Запрос для поиска текста');finderAutomatic.type='checkbox';finderAutomatic.checked=localStorage.getItem('auto-lyrics')!=='off';finderAutoLabel.append(finderAutomatic,node('span','','Автоматически находить и сохранять текст'));finderAutomatic.onchange=()=>{localStorage.setItem('auto-lyrics',finderAutomatic.checked?'on':'off');if(!finderAutomatic.checked)clearTimeout(autoLyricsTimer)};finderSearch.type='submit';finderForm.append(finderQuery,finderSearch);finderBody.append(finderResults,finderPreview);finderActions.append(finderClose,finderApply);lyricsFinder.append(finderTitle,finderAutoLabel,finderForm,finderStatus,finderBody,finderActions);document.body.append(lyricsFinder);lyricsFinder.setAttribute('aria-label','Поиск текста песни');lyricsFinder.addEventListener('keydown',e=>e.stopPropagation());finderClose.onclick=()=>lyricsFinder.close();finderApply.disabled=true;
-const finderMetadata=node('input'),finderMetadataLabel=node('label','sc-check'),finderMetadataOnly=node('button','outline','Применить только данные');finderMetadata.type='checkbox';finderMetadata.checked=true;finderMetadataLabel.append(finderMetadata,node('span','','При выборе текста обновить название, исполнителя и альбом из результата LRCLIB'));lyricsFinder.insertBefore(finderMetadataLabel,finderForm);finderActions.insertBefore(finderMetadataOnly,finderApply);finderMetadataOnly.disabled=true;finderMetadataOnly.onclick=async()=>{if(!finderSelected||!finderTarget)return;finderMetadataOnly.disabled=true;try{await persistLyricsMetadata(finderTarget,finderSelected);finderStatus.textContent='Название, исполнитель и альбом обновлены. Текст не изменён.'}catch(e){finderStatus.textContent=cleanError(e)}finally{finderMetadataOnly.disabled=false}};
-const lookupRow=node('div','lyrics-lookup'),lookupButton=node('button','quiet','Найти текст');lookupRow.append(lookupButton);document.querySelector('.now-details').append(lookupRow);const findLyricsButton=node('button','outline','Найти текст в интернете');lyricsTools.prepend(findLyricsButton);
-function chooseCandidate(result){finderSelected=result;finderPreview.textContent=result.syncedLyrics||result.plainLyrics||(result.instrumental?'Инструментальная запись — текста нет.':'Нет текста');finderApply.disabled=result.instrumental||!(result.syncedLyrics||result.plainLyrics);finderMetadataOnly.disabled=TrackIdentity.damaged(result.artist)||TrackIdentity.damaged(result.title);[...finderResults.children].forEach(b=>b.classList.toggle('selected',Number(b.dataset.id)===result.id))}
-function showCandidates(results){finderResults.replaceChildren(...results.map(r=>{const b=node('button','finder-result');b.dataset.id=r.id;b.append(node('strong','',r.title),node('span','',r.artist+' · '+r.album),node('small','',fmt(r.duration)+' · '+(r.syncedLyrics?'С таймкодами строк':'Обычный текст')+(r.matchNote?' · '+r.matchNote:r.exact?' · точное совпадение':'')));b.onclick=()=>chooseCandidate(r);return b}));finderStatus.textContent=results.length?'Проверь исполнителя, версию песни и длительность. Проверь альбом: один трек бывает в нескольких изданиях. Можно применить только данные или сохранить их вместе с текстом.':'Текст не найден. Попробуй изменить запрос или вставь его вручную.';if(results.length)chooseCandidate(results[0]);else{finderSelected=null;finderApply.disabled=true;finderMetadataOnly.disabled=true;finderPreview.textContent=''}}
-async function findLyrics(target,query=''){return window.lumen.lyricsSearch({title:target.title,artist:target.artist,album:target.album,duration:target.duration,lyrics:target.lyrics||'',remote:!!target.remote,originalTitle:target.originalTitle,publisherArtist:target.publisherArtist,metadataManual:target.metadataManual,metadataSource:target.metadataSource,metadataOriginal:target.metadataOriginal,metadataVersion:target.metadataVersion,uploader:target.uploader},query)}
-async function openLyricsFinder(target=current){if(!target?.id)target=current;if(!target)return;finderTarget=target;finderQuery.value=TrackIdentity.derive(target).queries[0]||target.title;finderSelected=null;finderApply.disabled=true;finderPreview.textContent='';finderResults.replaceChildren();finderStatus.textContent='Ищем текст…';if(lyricsEditor.open)lyricsEditor.close();lyricsFinder.showModal();const generation=++finderGeneration;try{const results=lyricsCandidates.get(finderTarget.id)||await findLyrics(finderTarget);if(generation===finderGeneration)showCandidates(results)}catch(e){if(generation===finderGeneration)finderStatus.textContent=cleanError(e)}}
-findLyricsButton.onclick=lookupButton.onclick=openLyricsFinder;finderForm.onsubmit=async e=>{e.preventDefault();if(!finderTarget)return;const generation=++finderGeneration;finderSearch.disabled=true;finderStatus.textContent='Ищем…';try{const results=await findLyrics(finderTarget,finderQuery.value);if(generation===finderGeneration)showCandidates(results)}catch(e){finderStatus.textContent=cleanError(e)}finally{finderSearch.disabled=false}};
-finderApply.onclick=async()=>{if(!finderSelected||!finderTarget)return;const target=finderTarget,selected=finderSelected;finderApply.disabled=true;try{await saveFoundLyrics(target,selected,{updateMetadata:finderMetadata.checked});lyricsFinder.close()}catch(e){finderStatus.textContent=cleanError(e)}finally{finderApply.disabled=false}};
-async function autoFindLyrics(t){const identityAtStart=lyricsIdentityKey(t);if(autoLyricsAttempted.has(t.id))return;autoLyricsAttempted.add(t.id);if(current?.id===t.id)lookupButton.textContent='Ищем текст…';try{const results=await findLyrics(t);if(identityAtStart!==lyricsIdentityKey(t))return;lyricsCandidates.set(t.id,results);const exact=results.find(r=>r.exact&&!r.instrumental&&(r.syncedLyrics||r.plainLyrics));if(exact&&!t.lyrics?.trim())await saveFoundLyrics(t,exact,{automatic:true});if(current?.id===t.id)setLyrics(t)}catch(e){if(current?.id===t.id){lookupButton.textContent='Повторить поиск';lookupButton.title=cleanError(e);autoLyricsAttempted.delete(t.id)}}}
-const setLyricsBeforeFinder=setLyrics;setLyrics=function(t){setLyricsBeforeFinder(t);lookupRow.classList.toggle('hidden',!!t.lyrics||!t.id);lookupButton.textContent=lyricsCandidates.get(t.id)?.length?'Выбрать найденный текст':'Найти текст';lookupButton.title='';clearTimeout(autoLyricsTimer);if(t.id&&!t.lyrics&&finderAutomatic.checked&&!autoLyricsAttempted.has(t.id))autoLyricsTimer=setTimeout(()=>autoFindLyrics(t),900)};
-window.runLyricsFinderUITest=()=>{const checks={providerDialog:lyricsFinder.tagName==='DIALOG',manualEntry:lyricsTools.contains(manualTimingButton),searchEntry:lyricsTools.contains(findLyricsButton),autoToggle:finderAutomatic.type==='checkbox'};const fixture={id:1,title:'Тест',artist:'Исполнитель',album:'Альбом',duration:100,plainLyrics:'Проверочный текст',syncedLyrics:'',exact:false};showCandidates([fixture]);checks.preview=finderPreview.textContent==='Проверочный текст'&&!finderApply.disabled;return{ok:Object.values(checks).every(Boolean),checks}};
-if(current)setLyrics(current);
+const lyricsIdentityKey = (t) => {
+  const m = TrackIdentity.derive(t);
+  return JSON.stringify([m.title, m.artist, m.album, m.version]);
+};
+const lyricsFinder = node('dialog', 'lyrics-finder'),
+  finderQuery = node('input'),
+  finderSearch = node('button', 'primary', 'Найти'),
+  finderResults = node('div', 'finder-results'),
+  finderPreview = node('pre', 'finder-preview'),
+  finderStatus = node('p', 'sc-hint'),
+  finderApply = node('button', 'primary', 'Выбрать этот текст'),
+  finderClose = node('button', 'outline', 'Закрыть'),
+  finderAutomatic = node('input'),
+  finderAutoLabel = node('label', 'sc-check'),
+  finderTitle = node('h2', '', 'Поиск текстов · LRCLIB'),
+  finderForm = node('form', 'sc-search'),
+  finderBody = node('div', 'finder-body'),
+  finderActions = node('div', 'editor-actions');
+let finderTarget = null,
+  finderSelected = null,
+  finderGeneration = 0,
+  autoLyricsTimer = null;
+const lyricsCandidates = new Map(),
+  autoLyricsAttempted = new Set();
+finderQuery.placeholder = 'Исполнитель и название песни';
+finderQuery.maxLength = 500;
+finderQuery.setAttribute('aria-label', 'Запрос для поиска текста');
+finderAutomatic.type = 'checkbox';
+finderAutomatic.checked = localStorage.getItem('auto-lyrics') !== 'off';
+finderAutoLabel.append(
+  finderAutomatic,
+  node('span', '', 'Автоматически находить и сохранять текст')
+);
+finderAutomatic.onchange = () => {
+  localStorage.setItem('auto-lyrics', finderAutomatic.checked ? 'on' : 'off');
+  if (!finderAutomatic.checked) clearTimeout(autoLyricsTimer);
+};
+finderSearch.type = 'submit';
+finderForm.append(finderQuery, finderSearch);
+finderBody.append(finderResults, finderPreview);
+finderActions.append(finderClose, finderApply);
+lyricsFinder.append(
+  finderTitle,
+  finderAutoLabel,
+  finderForm,
+  finderStatus,
+  finderBody,
+  finderActions
+);
+document.body.append(lyricsFinder);
+lyricsFinder.setAttribute('aria-label', 'Поиск текста песни');
+lyricsFinder.addEventListener('keydown', (e) => e.stopPropagation());
+finderClose.onclick = () => lyricsFinder.close();
+finderApply.disabled = true;
+const finderMetadata = node('input'),
+  finderMetadataLabel = node('label', 'sc-check'),
+  finderMetadataOnly = node('button', 'outline', 'Применить только данные');
+finderMetadata.type = 'checkbox';
+finderMetadata.checked = true;
+finderMetadataLabel.append(
+  finderMetadata,
+  node('span', '', 'При выборе текста обновить название, исполнителя и альбом из результата LRCLIB')
+);
+lyricsFinder.insertBefore(finderMetadataLabel, finderForm);
+finderActions.insertBefore(finderMetadataOnly, finderApply);
+finderMetadataOnly.disabled = true;
+finderMetadataOnly.onclick = async () => {
+  if (!finderSelected || !finderTarget) return;
+  finderMetadataOnly.disabled = true;
+  try {
+    await persistLyricsMetadata(finderTarget, finderSelected);
+    finderStatus.textContent = 'Название, исполнитель и альбом обновлены. Текст не изменён.';
+  } catch (e) {
+    finderStatus.textContent = cleanError(e);
+  } finally {
+    finderMetadataOnly.disabled = false;
+  }
+};
+const lookupRow = node('div', 'lyrics-lookup'),
+  lookupButton = node('button', 'quiet', 'Найти текст');
+lookupRow.append(lookupButton);
+document.querySelector('.now-details').append(lookupRow);
+const findLyricsButton = node('button', 'outline', 'Найти текст в интернете');
+lyricsTools.prepend(findLyricsButton);
+function chooseCandidate(result) {
+  finderSelected = result;
+  finderPreview.textContent =
+    result.syncedLyrics ||
+    result.plainLyrics ||
+    (result.instrumental ? 'Инструментальная запись — текста нет.' : 'Нет текста');
+  finderApply.disabled = result.instrumental || !(result.syncedLyrics || result.plainLyrics);
+  finderMetadataOnly.disabled =
+    TrackIdentity.damaged(result.artist) || TrackIdentity.damaged(result.title);
+  [...finderResults.children].forEach((b) =>
+    b.classList.toggle('selected', Number(b.dataset.id) === result.id)
+  );
+}
+function showCandidates(results) {
+  finderResults.replaceChildren(
+    ...results.map((r) => {
+      const b = node('button', 'finder-result');
+      b.dataset.id = r.id;
+      b.append(
+        node('strong', '', r.title),
+        node('span', '', r.artist + ' · ' + r.album),
+        node(
+          'small',
+          '',
+          fmt(r.duration) +
+            ' · ' +
+            (r.syncedLyrics ? 'С таймкодами строк' : 'Обычный текст') +
+            (r.matchNote ? ' · ' + r.matchNote : r.exact ? ' · точное совпадение' : '')
+        )
+      );
+      b.onclick = () => chooseCandidate(r);
+      return b;
+    })
+  );
+  finderStatus.textContent = results.length
+    ? 'Проверь исполнителя, версию песни и длительность. Проверь альбом: один трек бывает в нескольких изданиях. Можно применить только данные или сохранить их вместе с текстом.'
+    : 'Текст не найден. Попробуй изменить запрос или вставь его вручную.';
+  if (results.length) chooseCandidate(results[0]);
+  else {
+    finderSelected = null;
+    finderApply.disabled = true;
+    finderMetadataOnly.disabled = true;
+    finderPreview.textContent = '';
+  }
+}
+async function findLyrics(target, query = '') {
+  return window.lumen.lyricsSearch(
+    {
+      title: target.title,
+      artist: target.artist,
+      album: target.album,
+      duration: target.duration,
+      lyrics: target.lyrics || '',
+      remote: !!target.remote,
+      originalTitle: target.originalTitle,
+      publisherArtist: target.publisherArtist,
+      metadataManual: target.metadataManual,
+      metadataSource: target.metadataSource,
+      metadataOriginal: target.metadataOriginal,
+      metadataVersion: target.metadataVersion,
+      uploader: target.uploader,
+    },
+    query
+  );
+}
+async function openLyricsFinder(target = current) {
+  if (!target?.id) target = current;
+  if (!target) return;
+  finderTarget = target;
+  finderQuery.value = TrackIdentity.derive(target).queries[0] || target.title;
+  finderSelected = null;
+  finderApply.disabled = true;
+  finderPreview.textContent = '';
+  finderResults.replaceChildren();
+  finderStatus.textContent = 'Ищем текст…';
+  if (lyricsEditor.open) lyricsEditor.close();
+  lyricsFinder.showModal();
+  const generation = ++finderGeneration;
+  try {
+    const results = lyricsCandidates.get(finderTarget.id) || (await findLyrics(finderTarget));
+    if (generation === finderGeneration) showCandidates(results);
+  } catch (e) {
+    if (generation === finderGeneration) finderStatus.textContent = cleanError(e);
+  }
+}
+findLyricsButton.onclick = lookupButton.onclick = openLyricsFinder;
+finderForm.onsubmit = async (e) => {
+  e.preventDefault();
+  if (!finderTarget) return;
+  const generation = ++finderGeneration;
+  finderSearch.disabled = true;
+  finderStatus.textContent = 'Ищем…';
+  try {
+    const results = await findLyrics(finderTarget, finderQuery.value);
+    if (generation === finderGeneration) showCandidates(results);
+  } catch (e) {
+    finderStatus.textContent = cleanError(e);
+  } finally {
+    finderSearch.disabled = false;
+  }
+};
+finderApply.onclick = async () => {
+  if (!finderSelected || !finderTarget) return;
+  const target = finderTarget,
+    selected = finderSelected;
+  finderApply.disabled = true;
+  try {
+    await saveFoundLyrics(target, selected, { updateMetadata: finderMetadata.checked });
+    lyricsFinder.close();
+  } catch (e) {
+    finderStatus.textContent = cleanError(e);
+  } finally {
+    finderApply.disabled = false;
+  }
+};
+async function autoFindLyrics(t) {
+  const identityAtStart = lyricsIdentityKey(t);
+  if (autoLyricsAttempted.has(t.id)) return;
+  autoLyricsAttempted.add(t.id);
+  if (current?.id === t.id) lookupButton.textContent = 'Ищем текст…';
+  try {
+    const results = await findLyrics(t);
+    if (identityAtStart !== lyricsIdentityKey(t)) return;
+    lyricsCandidates.set(t.id, results);
+    const exact = results.find(
+      (r) => r.exact && !r.instrumental && (r.syncedLyrics || r.plainLyrics)
+    );
+    if (exact && !t.lyrics?.trim()) await saveFoundLyrics(t, exact, { automatic: true });
+    if (current?.id === t.id) setLyrics(t);
+  } catch (e) {
+    if (current?.id === t.id) {
+      lookupButton.textContent = 'Повторить поиск';
+      lookupButton.title = cleanError(e);
+      autoLyricsAttempted.delete(t.id);
+    }
+  }
+}
+const setLyricsBeforeFinder = setLyrics;
+setLyrics = function (t) {
+  setLyricsBeforeFinder(t);
+  lookupRow.classList.toggle('hidden', !!t.lyrics || !t.id);
+  lookupButton.textContent = lyricsCandidates.get(t.id)?.length
+    ? 'Выбрать найденный текст'
+    : 'Найти текст';
+  lookupButton.title = '';
+  clearTimeout(autoLyricsTimer);
+  if (t.id && !t.lyrics && finderAutomatic.checked && !autoLyricsAttempted.has(t.id))
+    autoLyricsTimer = setTimeout(() => autoFindLyrics(t), 900);
+};
+window.runLyricsFinderUITest = () => {
+  const checks = {
+    providerDialog: lyricsFinder.tagName === 'DIALOG',
+    manualEntry: lyricsTools.contains(manualTimingButton),
+    searchEntry: lyricsTools.contains(findLyricsButton),
+    autoToggle: finderAutomatic.type === 'checkbox',
+  };
+  const fixture = {
+    id: 1,
+    title: 'Тест',
+    artist: 'Исполнитель',
+    album: 'Альбом',
+    duration: 100,
+    plainLyrics: 'Проверочный текст',
+    syncedLyrics: '',
+    exact: false,
+  };
+  showCandidates([fixture]);
+  checks.preview = finderPreview.textContent === 'Проверочный текст' && !finderApply.disabled;
+  return { ok: Object.values(checks).every(Boolean), checks };
+};
+if (current) setLyrics(current);
