@@ -1,0 +1,17 @@
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.build/
+work/
+Data/
+build/
+docs/
+licenses/
+alignment/
+app/vendor/
+pwa/public/vendor/
+package-lock.json
+**/package-lock.json
+scripts/upgrade-base.json
+*.md

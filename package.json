@@ -10,10 +10,17 @@
     "archive:mac": "node scripts/archive-macos.mjs",
     "build:windows": "node scripts/build-windows.mjs",
     "test:palette": "node scripts/test-cover-palette.cjs",
-    "test:interface": "node scripts/run-interface-test.mjs"
+    "test:interface": "node scripts/run-interface-test.mjs",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@electron/packager": "^18.3.6",
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "globals": "15.15.0",
+    "prettier": "3.10.0",
     "rcedit": "5.0.2"
   }
 }
