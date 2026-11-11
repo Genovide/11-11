@@ -1,5 +1,4 @@
-const VERSION = '1.2.5',
-  REPO = 'Genovide/SoundSync';
+const REPO = 'Genovide/SoundSync';
 function newer(a, b) {
   const parse = (v) => String(v).replace(/^v/, '').split('.').map(Number);
   if (!/^v?\d+\.\d+\.\d+$/.test(a)) return false;
@@ -10,7 +9,9 @@ function newer(a, b) {
   }
   return false;
 }
-module.exports = function ({ ipcMain, shell, fetchImpl = fetch }) {
+module.exports = function ({ ipcMain, shell, version, fetchImpl = fetch }) {
+  // Версия берётся из app/package.json, чтобы не забыть поправить её при релизе.
+  const VERSION = version;
   ipcMain.handle('updates-check', async () => {
     const response = await fetchImpl(`https://api.github.com/repos/${REPO}/releases/latest`, {
       headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'SoundSync-player' },

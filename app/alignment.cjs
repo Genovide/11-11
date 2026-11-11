@@ -5,11 +5,11 @@ const fs = require('node:fs/promises'),
 module.exports = function setup({ app, ipcMain, getLibrary, save, send }) {
   let active = null;
   const directory = () => path.join(app.getPath('userData'), 'alignment');
-  async function fingerprint(t) {
+  async function fingerprint(t, recordedPath = t.path) {
     const stat = await fs.stat(t.path);
     return crypto
       .createHash('sha256')
-      .update(JSON.stringify([t.path, stat.size, stat.mtimeMs, t.lyrics]))
+      .update(JSON.stringify([recordedPath, stat.size, stat.mtimeMs, t.lyrics]))
       .digest('hex');
   }
   const { TimingEdit } = require('./timing-edit.js'),
@@ -139,11 +139,16 @@ module.exports = function setup({ app, ipcMain, getLibrary, save, send }) {
     await Promise.all(
       tracks.map(async (t) => {
         try {
-          const cache = JSON.parse(
-            await fs.readFile(path.join(directory(), t.id + '.json'), 'utf8')
-          );
+          const file = path.join(directory(), t.id + '.json');
+          const cache = JSON.parse(await fs.readFile(file, 'utf8'));
           if (cache.fingerprint === (await fingerprint(t))) t.alignment = cache.result;
-          else delete t.alignment;
+          else if (t.movedFrom && cache.fingerprint === (await fingerprint(t, t.movedFrom))) {
+            // Файл перенесли без изменений: переносим тайминги на новый путь.
+            t.alignment = cache.result;
+            cache.fingerprint = await fingerprint(t);
+            await fs.writeFile(file + '.tmp', JSON.stringify(cache));
+            await fs.rename(file + '.tmp', file);
+          } else delete t.alignment;
         } catch {
           delete t.alignment;
         }
