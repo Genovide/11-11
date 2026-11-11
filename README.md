@@ -25,6 +25,10 @@
 
 **[Открыть SoundSync Pocket](https://soundsync-pocket.carvedbasil3.chatgpt.site)** — отдельная мобильная веб-версия с поиском SoundCloud, случайными треками, «Моей волной», любимым и историей. Открывается по ссылке и устанавливается на главный экран; скачивать настольную сборку и апдейт не нужно.
 
+<p align="center">
+  <img src="docs/screenshot-mobile.png" width="360" alt="Главный экран мобильной версии SoundSync Pocket">
+</p>
+
 ### Как установить
 
 1. Открой [ссылку на SoundSync](https://soundsync-pocket.carvedbasil3.chatgpt.site) **в Safari**. Если ссылка открылась внутри Telegram или другого приложения, выбери **«Открыть в Safari»**.
