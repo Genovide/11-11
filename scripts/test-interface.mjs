@@ -59,6 +59,23 @@ try {
  await check('Reopening always starts with visualization',`listeningView==='visual'&&showVisual.getAttribute('aria-selected')==='true'`);
  await evaluate(`exitImmersive();setPalette({...current,cover:''})`);
  await check('Missing cover clears the previous album palette',`JSON.stringify(targetPalette)===JSON.stringify(CoverPalette.fallback)`);
+ await call('Emulation.setDeviceMetricsOverride',{width:1600,height:980,deviceScaleFactor:1,mobile:false});
+ await evaluate(`exitImmersive();window.dashboardNavigation.openHome();for(const track of library.tracks){current=track;audio.dispatchEvent(new Event('playing'))}document.querySelector('main').style.scrollBehavior='auto';[...document.querySelectorAll('.home-section-heading')].find(h=>h.querySelector('h2').textContent==='История прослушивания')?.querySelector('button')?.click()`);
+ await pause(400);
+ const historyTop=await evaluate(`(()=>{const main=document.querySelector('main');main.scrollTop=Math.min(600,main.scrollHeight-main.clientHeight);return main.scrollTop})()`);
+ assert.ok(historyTop>100,'History fixture can scroll');
+ await evaluate(`document.querySelectorAll('.home-history .home-album')[3].click()`);await pause(1100);
+ await check('History track selection and playback preserve scroll',`Math.abs(document.querySelector('main').scrollTop-${historyTop})<=1&&!audio.paused`);
+ await evaluate(`audio.pause();setLyrics({lyrics:'[00:03.00]<00:03.00>Первая <00:04.00>строка'});audio.currentTime=2.99;syncLyrics();paintLyricLetters(2.99)`);
+ await check('Letters stay unfilled before the first word',`[...lyricBox.querySelectorAll('.lyric-glyph')].every(e=>Number.parseFloat(e.style.getPropertyValue('--glyph-fill'))===-20)&&lumenLetterPose(2.99,3,1,0,6).glow===0`);
+ await evaluate(`setLyrics({lyrics:'И так',alignment:{lines:[{time:.68,end:4,text:'И так',words:[{time:.68,end:3.2,text:'И ',matched:false},{time:3.2,end:4,text:'так',matched:true}]}]}});audio.currentTime=1;syncLyrics();paintLyricLetters(1)`);
+ await check('Uncertain intro words do not activate the line',`activeLine===-1&&lyricBox.querySelector('.lyric-glyph').style.getPropertyValue('--glyph-fill')==='-20%'`);
+ const card=(slug,title,artist,a,b)=>`<section><a href="/album/${slug}"><img alt="${artist} — ${title}, обложка альбома" src="https://example.com/cover.jpg"><span>39</span><span>137</span></a><div><a href="/album/${slug}">${title}</a><a href="/artist/test">${artist}</a></div><div class="bg-user-color">${a}</div><div class="border-user-color">${b}</div></section>`;
+ const review=`<div class="review-wrapper"><a href="/user/1"><img></a><a href="/user/1">Reviewer</a><div class="text-[20px] font-bold"><span>65</span></div><button>8</button><h3>Review title</h3><div class="prose"><div>First paragraph<br><br>Second paragraph.</div><div class="text-xs">11.11.2026</div></div><footer><span>2</span><a href="/reviews/192216">Link</a></footer></div>`;
+ const cards=await evaluate(`RztData.parse(${JSON.stringify('<main>'+card('8ballz','8BALLZ','BOOKER',72,69)+card('zero','Zero','Other',0,12)+'</main>')},'/releases')`);
+ assert.equal(cards.releases.length,2);assert.equal(cards.releases[0].title,'8BALLZ');assert.equal(cards.releases[0].scores.reviews,72);assert.equal(cards.releases[0].scores.users,69);assert.equal(cards.releases[1].scores.reviews,0);
+ const detail=await evaluate(`RztData.parse(${JSON.stringify('<main><h1>8BALLZ</h1><a href="/artist/booker">BOOKER</a><button><span>72</span> <span>69</span></button>'+review+card('related','Related','Other',11,22)+'</main>')},'/album/8ballz')`);
+ assert.equal(detail.releases.find(t=>t.path==='/album/8ballz').scores.reviews,72);assert.equal(detail.reviews[0].author,'Reviewer');assert.equal(detail.reviews[0].score,65);assert.equal(detail.reviews[0].path,'/reviews/192216');assert.ok(!detail.reviews[0].body.includes('11.11.2026'));checks.push('RZT modern cards, zero scores, authors, review content and rating isolation');
  assert.equal(errors.length,0,'No renderer exceptions');checks.push('No renderer exceptions');
  fs.writeFileSync(path.join(output,'report.json'),JSON.stringify({ok:true,checks},null,2));console.log(JSON.stringify({ok:true,checks},null,2));
 } finally {socket.close()}

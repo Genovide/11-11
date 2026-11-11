@@ -20,7 +20,7 @@ setLyrics=function(t){
 };
 syncLyrics=function(){
  if(!lyricBox.classList.contains('synced'))return;
- let idx=-1;for(let i=0;i<lyricLines.length;i++)if(lyricLines[i].time!==null&&audio.currentTime>=lyricLines[i].time)idx=i;if(manualLyricMode)idx=lyricPlaybackState(lyricLines,audio.currentTime).index;lyricGap.classList.add('hidden');lyricBox.classList.toggle('no-vocals',manualLyricMode&&idx<0);lyricBox.classList.toggle('manual-gap',manualLyricMode&&idx<0);
+ let idx=-1;for(let i=0;i<lyricLines.length;i++){const start=lyricStart(lyricLines[i]);if(start!==null&&audio.currentTime>=start)idx=i}if(manualLyricMode)idx=lyricPlaybackState(lyricLines,audio.currentTime).index;lyricGap.classList.add('hidden');lyricBox.classList.toggle('no-vocals',manualLyricMode&&idx<0);lyricBox.classList.toggle('manual-gap',manualLyricMode&&idx<0);
  if(idx===activeLine)return;activeLine=idx;
  [...lyricBox.children].forEach((e,i)=>{const distance=i-idx;e.classList.toggle('current',i===idx);e.classList.toggle('past',i<idx);e.classList.toggle('near',Math.abs(distance)===1);e.classList.toggle('distant',Math.abs(distance)>1);e.style.setProperty('--lyric-delay',Math.min(180,Math.abs(distance)*35)+'ms')});
  targetLyricScroll();

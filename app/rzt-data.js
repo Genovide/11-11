@@ -137,7 +137,7 @@
       }
       const kind = text(first(value.kind, value.__typename, value.entity_type)).toLowerCase();
       if (kind === 'release' || ((value.artists || value.artist || value.slug) && value.title && (value.meta?.score_reviews_avg !== undefined || value.meta?.total_rating !== undefined))) {
-        const item = release(value); if (item) { const old = releases.get(item.id); releases.set(item.id, old ? {...old, ...item, path:item.path || old.path} : item); }
+        const item = release(value); if (item) { const old = releases.get(item.id); releases.set(item.id, old ? {...old, ...item, path:item.path || old.path,scores:Object.fromEntries(['flom','reviews','users'].map(k=>[k,item.scores[k]??old.scores[k]]))} : item); }
       }
       const inReviews = /review|recension/i.test(context);
       const hasBody = value.text || value.body || value.content || value.review_text || value.reviewText;
@@ -156,22 +156,53 @@
   function domFallback(html, result, requestedPath) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const clean = v => (v || '').replace(/\s+/g, ' ').trim();
+    const domScores = scope => {
+      const read=selector=>{for(const e of scope.querySelectorAll(selector)){const value=clean(e.textContent).replace(',','.');if(/^\d{1,3}(?:\.\d+)?$/.test(value))return score(value);}return null;};
+      return {flom:read('[class*="bg-flomaster"]'),reviews:read('.bg-user-color'),users:read('.border-user-color')};
+    };
+    const mergeScores=(item,scores)=>{for(const key of ['flom','reviews','users'])item.scores[key]=scores[key]??item.scores[key]??null;};
     const paths = new Map(result.releases.filter(r => r.path).map(r => [r.path, r]));
     for (const a of doc.querySelectorAll('a[href]')) {
       const route = url(a.getAttribute('href'));
       if (!route || !/^\/(track|album|release)\//.test(route)) continue;
-      const img = a.querySelector('img'), title = clean(a.getAttribute('title') || img?.alt || a.textContent);
-      if (!title || title.length > 180) continue;
-      let card = a;
-      for (let i=0; i<4 && card.parentElement; i++) { const parent=card.parentElement; if (parent.querySelectorAll('a[href^="/track/"],a[href^="/album/"]').length > 4) break; card=parent; if (card.querySelector('a[href^="/artist/"]')) break; }
-      const artists = [...card.querySelectorAll('a[href^="/artist/"]')].map(n => clean(n.textContent)).filter(Boolean).join(', ');
+      let card=a;
+      for(let parent=a.parentElement,i=0;parent&&i<8;parent=parent.parentElement,i++){
+        const routes=new Set([...parent.querySelectorAll('a[href]')].map(n=>url(n.getAttribute('href'))).filter(p=>/^\/(track|album|release)\//.test(p)));
+        if(routes.size>1)break;
+        card=parent;
+        if(parent.querySelector('a[href^="/artist/"]')&&parent.querySelector('.bg-user-color,.border-user-color'))break;
+      }
+      const titleLink=[...card.querySelectorAll('a[href]')].find(n=>url(n.getAttribute('href'))===route&&!n.querySelector('img,svg')&&clean(n.textContent));
+      const img=card.querySelector('img'),alt=clean(img?.alt).replace(/,\s*обложка.*$/i,''),title=clean(titleLink?.textContent||a.getAttribute('title')||alt.split(/\s+—\s+/).slice(1).join(' — ')||a.textContent);
+      if(!title||title.length>180)continue;
+      const artists=[...new Set([...card.querySelectorAll('a[href^="/artist/"]')].map(n=>clean(n.textContent)).filter(Boolean))].join(', ');
+      const scores=domScores(card);
       const existing = paths.get(route) || result.releases.find(r => !r.path && clean(r.title).toLowerCase() === title.toLowerCase() && (!artists || !r.artist || clean(r.artist).toLowerCase() === artists.toLowerCase()));
-      if (existing) { existing.path = route; existing.cover ||= image(img?.getAttribute('src')); existing.artist ||= artists; paths.set(route,existing); }
-      else { const item = {id:route,path:route,title,artist:artists,cover:image(img?.getAttribute('src')),type:route.startsWith('/track/')?'track':'album',scores:{flom:null,reviews:null,users:null},reviewCount:null}; paths.set(route,item); result.releases.push(item); }
+      if (existing) { existing.path = route; existing.cover ||= image(img?.getAttribute('src')); existing.artist ||= artists;if(titleLink)existing.title=title;mergeScores(existing,scores);paths.set(route,existing); }
+      else { const item = {id:route,path:route,title,artist:artists,cover:image(img?.getAttribute('src')),type:route.startsWith('/track/')?'track':'album',scores,reviewCount:null}; paths.set(route,item); result.releases.push(item); }
     }
     if (/^\/(track|album|release)\//.test(requestedPath)) {
       const title=clean(doc.querySelector('h1')?.textContent || doc.querySelector('meta[property="og:title"]')?.content?.split(' | ')[0]);
       if (title && !result.releases.some(r => r.path === requestedPath)) result.releases.unshift({id:requestedPath,path:requestedPath,title,artist:'',cover:image(doc.querySelector('meta[property="og:image"]')?.content),type:'',scores:{flom:null,reviews:null,users:null}});
+      const selected=result.releases.find(r=>r.path?.split('?')[0]===requestedPath.split('?')[0]);
+      if(selected){
+        const main=doc.querySelector('main')||doc.body,scores=domScores(main);
+        // Current detail header wraps the two audience averages in a button.
+        const summary=[...main.querySelectorAll('button')].filter(e=>!e.closest('.review-wrapper')).map(e=>clean(e.textContent)).find(t=>/^\d{1,3}(?:[.,]\d+)?\s+\d{1,3}(?:[.,]\d+)?$/.test(t));if(summary){const values=summary.split(/\s+/);scores.reviews=score(values[0].replace(',','.'));scores.users=score(values[1].replace(',','.'));}
+        mergeScores(selected,scores);selected.artist||=clean(main.querySelector('a[href^="/artist/"]')?.textContent);
+      }
+    }
+    // Current RZT renders reviews as ordinary HTML rather than reviewContent props.
+    for(const card of doc.querySelectorAll('.review-wrapper')){
+      const link=card.querySelector('a[href^="/reviews/"]'),path=url(link?.getAttribute('href')),content=card.querySelector('.prose>div:first-child');
+      if(!path||!content)continue;
+      const author=[...card.querySelectorAll('a[href^="/user/"]')].map(e=>clean(e.textContent)).find(Boolean)||'Участник РЗТ';
+      const number=card.querySelector('[class*="text-[20px]"]'),date=clean(card.querySelector('.prose .text-xs')?.textContent),match=/^(\d{2})\.(\d{2})\.(\d{4})$/.exec(date);
+      const item=review({id:path.split('/')[2],url:path,title:card.querySelector('h3')?.textContent,text:content.innerHTML,user:{name:author},rating:clean(number?.textContent),date:match?`${match[3]}-${match[2]}-${match[1]}`:date});
+      if(!item)continue;
+      const old=result.reviews.find(r=>r.id===item.id||r.path===path||clean(r.body.replace(/<[^>]+>/g,' ')).slice(0,80)===clean(content.textContent).slice(0,80));
+      if(old)Object.assign(old,{...item,score:item.score??old.score});else result.reviews.push(item);
+      result.reviewMarkers=true;
     }
     for (const element of doc.querySelectorAll('article[data-review-id], [data-review-id], [itemtype="https://schema.org/Review"]')) {
       const body=element.querySelector('[itemprop="reviewBody"], [data-review-text]')?.textContent;

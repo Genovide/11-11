@@ -27,11 +27,11 @@
  document.addEventListener('pointerout',event=>{if(movingCard&&!movingCard.contains(event.relatedTarget))resetMotion()},{passive:true});
  addEventListener('blur',resetMotion);motionQuery.addEventListener('change',resetMotion);
  const listRoot=document.querySelector('main'),renderBeforeScrollPreservation=render;
- const listContext=()=>JSON.stringify([view,selectedArtist,albumFilter,$('search').value]);
+ const listContext=()=>JSON.stringify([view,selectedArtist,albumFilter,$('search').value,document.body.classList.contains('dashboard-home')]);
  render=function(){
   const context=listContext(),top=listRoot.scrollTop;
-  const preserve=!document.body.classList.contains('dashboard-home')&&!document.body.classList.contains('track-focus');
+  const preserve=!document.body.classList.contains('track-focus');
   renderBeforeScrollPreservation();
-  if(preserve&&context===listContext()&&!document.body.classList.contains('dashboard-home'))listRoot.scrollTop=top;
+  if(preserve&&context===listContext())listRoot.scrollTop=top;
  };
 })();

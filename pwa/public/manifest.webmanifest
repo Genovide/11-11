@@ -1,0 +1,13 @@
+{
+  "id": "./",
+  "name": "SoundSync Pocket",
+  "short_name": "SoundSync",
+  "description": "SoundCloud и любимые треки — в твоём ритме.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101114",
+  "theme_color": "#101114",
+  "icons": [{"src":"./assets/icon.png","sizes":"512x512","type":"image/png","purpose":"any"}]
+}

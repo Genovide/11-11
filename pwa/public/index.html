@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101114">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="SoundSync Pocket: слушай SoundCloud и собирай любимые треки на iPhone.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self'; img-src 'self' https://*.sndcdn.com data:; connect-src 'self' https://*.sndcdn.com https://*.soundcloud.com https://*.soundcloud.cloud; frame-src 'none'; media-src 'self' https://*.sndcdn.com https://*.soundcloud.com https://*.soundcloud.cloud blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>SoundSync Pocket</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./assets/icon.png">
+  <link rel="icon" href="./assets/brand.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css?v=0.2.0">
+  <script defer src="./vendor/hls.light.min.js"></script>
+  <script type="module" src="./app.js?v=0.2.0"></script>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3zM9 20v-7h6v7"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 12 7-12 7Z"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M6 18a5 5 0 1 1 .4-10A6.5 6.5 0 0 1 19 10a4 4 0 0 1-1 8Z"/></symbol>
+</defs></svg>
+<div class="app-shell">
+  <header class="topbar">
+    <a href="./" class="brand" aria-label="SoundSync, главная"><img src="./assets/brand.svg" width="36" height="28" alt=""><span>Sound<span class="brand-light">Sync</span><small>POCKET</small></span></a>
+    <div class="top-actions"><span id="network" class="network"><i></i>Онлайн</span><button class="icon-button" id="settings" aria-label="Настройки"><svg><use href="#i-settings"/></svg></button></div>
+  </header>
+  <main id="main">
+    <section class="hero" id="hero">
+      <div class="hero-copy"><span class="eyebrow">ТВОЯ МУЗЫКА. ТВОЁ ПРОСТРАНСТВО.</span><h1>С собой.<br><em>В твоём ритме.</em></h1><p>Открывай SoundCloud.<br>Оставляй любимое рядом.</p><button id="hero-add" class="primary"><svg><use href="#i-plus"/></svg>Добавить трек</button></div>
+      <img class="statue" src="./assets/statue.png" alt="Статуя в наушниках SoundSync" fetchpriority="high">
+      <span class="hero-label">SOUNDSYNC × SOUNDCLOUD</span>
+    </section>
+    <section class="quick-actions" id="quick-actions" aria-label="Быстрые действия">
+      <button id="quick-favorites"><span class="quick-icon"><svg><use href="#i-heart"/></svg></span><span><strong>Любимое</strong><small id="favorite-summary">Треки, к которым возвращаешься</small></span><svg class="quick-arrow"><use href="#i-arrow"/></svg></button>
+      <a href="https://soundcloud.com/discover" target="_blank" rel="noopener noreferrer"><span class="quick-icon orange"><svg><use href="#i-cloud"/></svg></span><span><strong>Найти новый звук</strong><small>Открыть SoundCloud</small></span><svg class="quick-arrow"><use href="#i-arrow"/></svg></a>
+    </section>
+    <section class="collection" aria-labelledby="collection-title">
+      <div class="section-heading"><div><span class="eyebrow" id="collection-eyebrow">СОБРАНО ТОБОЙ</span><h2 id="collection-title">Мои треки <span id="count">0</span></h2></div><button class="icon-button add-button" id="collection-add" aria-label="Добавить ссылку на SoundCloud"><svg><use href="#i-plus"/></svg></button></div>
+      <label class="search"><svg><use href="#i-search"/></svg><input id="filter" type="search" placeholder="Название или исполнитель" autocomplete="off" aria-label="Поиск в сохранённых треках"></label>
+      <div id="tracks" class="track-list"></div>
+      <div id="empty" class="empty"><div class="empty-art"><img src="./assets/brand.svg" alt="" width="64" height="48"></div><h3 id="empty-title">Твой звук начинается здесь</h3><p id="empty-text">Скопируй ссылку на трек в SoundCloud.<br>Мы сохраним его здесь, а любимые — под сердечком.</p><button id="empty-add" class="primary">Вставить ссылку<svg><use href="#i-plus"/></svg></button><button id="example" class="text-button">Или послушать пример</button></div>
+      <button id="more" class="secondary" hidden>Показать ещё</button>
+    </section>
+    <p class="privacy-note">Твои сохранённые треки — на этом устройстве.<br>Воспроизведение — через SoundCloud.</p>
+  </main>
+</div>
+<section id="player" class="player" aria-label="Проигрыватель" hidden>
+  <div class="player-heading"><button id="expand-player" class="player-title-button" aria-label="Развернуть проигрыватель"><img id="mini-cover" src="./assets/icon.png" alt=""><span><strong id="mini-title">SoundSync</strong><small id="mini-artist">SoundCloud</small></span></button><button id="player-like" class="icon-button heart" aria-label="Добавить в избранное" aria-pressed="false"><svg><use href="#i-heart"/></svg></button><button id="collapse-player" class="icon-button" aria-label="Свернуть проигрыватель"><svg><use href="#i-chevron"/></svg></button></div>
+  <div class="player-detail"><span class="eyebrow">СЕЙЧАС ИГРАЕТ</span><img id="large-cover" src="./assets/icon.png" alt="Обложка выбранного трека"><h2 id="large-title"></h2><p id="large-artist"></p></div>
+  <div class="embed-wrap" id="embed-wrap"><p class="embed-placeholder">Плеер SoundSync</p></div>
+  <div class="player-foot"><a id="source-link" href="https://soundcloud.com" target="_blank" rel="noopener noreferrer">SoundCloud<svg><use href="#i-arrow"/></svg></a><span id="play-state" role="status">Нажми ▶ в плеере</span><button id="remove-track" class="text-button">Убрать из списка</button></div>
+</section>
+<nav class="bottom-nav" aria-label="Навигация"><button data-view="home" class="active" aria-current="page"><svg><use href="#i-home"/></svg><span>Главная</span></button><button data-view="favorites"><svg><use href="#i-heart"/></svg><span>Любимое</span></button><button data-view="history"><svg><use href="#i-clock"/></svg><span>История</span></button></nav>
+<dialog id="add-dialog" class="sheet"><form id="add-form"><div class="sheet-heading"><div><span class="eyebrow">НОВОЕ В ТВОЕЙ КОЛЛЕКЦИИ</span><h2>Добавить звук</h2></div><button class="icon-button" type="button" data-close="add-dialog" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></div><label class="field-label" for="track-url">Ссылка на трек или плейлист SoundCloud</label><input id="track-url" type="url" inputmode="url" required placeholder="https://soundcloud.com/artist/track" autocomplete="off" spellcheck="false"><p class="field-help">В SoundCloud нажми «Поделиться» → «Копировать ссылку».</p><p id="add-error" class="form-error" role="alert" hidden></p><button id="add-submit" class="primary full" type="submit"><svg><use href="#i-play"/></svg><span>Открыть и слушать</span></button><p class="sheet-note">Сердечко сохраняет трек в любимое внутри SoundSync. Аккаунт SoundCloud подключать не нужно.</p></form></dialog>
+<dialog id="settings-dialog" class="sheet"><div class="sheet-heading"><div><span class="eyebrow">SOUNDSYNC POCKET</span><h2>Всегда рядом</h2></div><button class="icon-button" data-close="settings-dialog" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></div><div class="install-card"><h3>Установить на iPhone</h3><ol><li>Открой эту страницу в Safari.</li><li>Нажми «Поделиться» → «На экран “Домой”».</li><li>Включи «Открывать как веб-приложение», если такой переключатель есть, и нажми «Добавить».</li></ol></div><p id="offline-state" class="status-line">Подготавливаем оболочку для офлайн-доступа…</p><p>Избранное и история сохраняются в этом браузере. На другом устройстве список будет отдельным. Очистка данных сайта удаляет эти отметки.</p><p>Для SoundCloud нужен интернет. Аудиофайлы не скачиваются в офлайн-библиотеку. Некоторые записи могут быть недоступны для встраивания или в твоём регионе.</p><button id="export-favorites" class="secondary full">Экспортировать избранное</button><label class="secondary full import-label">Восстановить избранное<input id="import-favorites" type="file" accept="application/json,.json" hidden></label><p class="version">Пробная веб-версия · 0.2.0</p></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

@@ -10,7 +10,7 @@ function uncertainCompletionTime(words,index){
 }
 function glyphGroup(element,text,start,duration,fill){
  const chars=graphemes(text);element.replaceChildren();element.setAttribute('aria-label',text);const glyphs=[];
- for(const char of chars){const span=node('span','lyric-glyph',char);span.setAttribute('aria-hidden','true');element.append(span);glyphs.push(span)}
+ for(const char of chars){const span=node('span','lyric-glyph',char);span.setAttribute('aria-hidden','true');span.style.setProperty('--glyph-fill','-20%');element.append(span);glyphs.push(span)}
  return {glyphs,start,duration,fill,text,element};
 }
 const setLyricsBeforeLetters=setLyrics;
@@ -36,7 +36,7 @@ function paintLyricLetters(time){
  for(const group of lyricGlyphGroups){
   if(group.uncertain||lyricBox.classList.contains('manual-gap')){group.reset=null;const completed=group.uncertain&&!lyricBox.classList.contains('manual-gap')&&time>=group.completeAt;group.element.style.setProperty("--word-halo","0");for(const span of group.glyphs){span.style.transform="";span.style.textShadow="";span.style.setProperty("--glyph-fill",completed?"120%":"-20%")}continue}
   const elapsed=time-group.start;
-  const glowIn=Math.max(0,Math.min(1,(elapsed+.12)/.4)),glowOut=Math.max(0,Math.min(1,(group.duration+.65-elapsed)/.75));
+  const glowIn=Math.max(0,Math.min(1,elapsed/.4)),glowOut=Math.max(0,Math.min(1,(group.duration+.65-elapsed)/.75));
   const wordGlow=motion?glowIn*glowIn*(3-2*glowIn)*glowOut*glowOut*(3-2*glowOut):0;
   group.element.style.setProperty('--word-halo',wordGlow.toFixed(3));
   if(elapsed<-.15||elapsed>group.duration+1.6){const state=elapsed>0?'past':'future';if(group.reset!==state){for(const span of group.glyphs){span.style.transform='';span.style.textShadow='';if(group.fill)span.style.setProperty('--glyph-fill',state==='past'?'120%':'-20%')}group.reset=state}continue}group.reset=false;

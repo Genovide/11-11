@@ -9,7 +9,7 @@ module.exports = ({app, ipcMain, BrowserWindow, getWindow}) => {
   function validPath(value) {
     if (typeof value !== 'string' || value.length > 1600) throw new Error('Некорректный адрес РЗТ');
     const u=new URL(value,HOME);
-    if (u.origin !== HOME || !/^\/(?:releases|search|track\/[^/]+|album\/[^/]+|release\/[^/]+|review\/[^/]+)(?:\/reviews)?\/?$/.test(u.pathname)) throw new Error('Некорректный адрес РЗТ');
+    if (u.origin !== HOME || !/^\/(?:releases|search|track\/[^/]+|album\/[^/]+|release\/[^/]+|reviews?\/[^/]+)(?:\/reviews)?\/?$/.test(u.pathname)) throw new Error('Некорректный адрес РЗТ');
     return u.pathname + u.search;
   }
   function rztSession() {

@@ -111,7 +111,7 @@ body>.now-panel { margin: 0; border: 0; border-radius: 0; box-shadow: none; disp
 .synced .lyric-line.past { color: #7b7b86; opacity: 1; }
 .lyric-line.plain { color: #b9b9c2; opacity: 1; }
 .synced .lyric-line.current,.lyric-line.current { color: #fafafa; opacity: 1; filter: none; }
-.letter-timed .lyric-glyph,.letter-decorative .lyric-glyph { background-image: linear-gradient(90deg,#fff calc(var(--glyph-fill,0%) - 20%),#a0a0ab calc(var(--glyph-fill,0%) + 20%)); }
+.letter-timed .lyric-glyph,.letter-decorative .lyric-glyph { background-image: linear-gradient(90deg,#fff calc(var(--glyph-fill,-20%) - 20%),#a0a0ab calc(var(--glyph-fill,-20%) + 20%)); }
 .song-insight { padding: 0; margin: 12px 0 0; border: 0; border-radius: 0; background: transparent; }
 .insight-disclosure { border-top: 1px solid var(--ui-border); }
 .insight-disclosure>summary { min-height: 38px; display: flex; align-items: center; justify-content: space-between; list-style: none; cursor: pointer; color: var(--ui-muted); font-size: 12px; }
@@ -337,7 +337,11 @@ body .now-panel::-webkit-scrollbar-button,body .now-panel *::-webkit-scrollbar-b
 }
 .lyrics.synced .lyric-line.near:not(.current) { opacity: .58; filter: blur(1.15px)!important; }
 .lyrics.synced .lyric-line.past:not(.current) { opacity: .36; filter: blur(2.2px)!important; }
-.lyrics.synced .lyric-line.current { opacity: 1; color: #fafafa; filter: none!important; }
+.lyrics.synced .lyric-line.current {
+  opacity: 1;
+  color: #fafafa;
+  filter: drop-shadow(0 0 .14em rgb(255 255 255 / .32)) drop-shadow(0 0 .45em rgb(255 255 255 / .18))!important;
+}
 .lyrics.synced .lyric-line:not(.current) .lyric-glyph {
   background-image: none;
   color: inherit;
@@ -353,7 +357,7 @@ body .now-panel::-webkit-scrollbar-button,body .now-panel *::-webkit-scrollbar-b
 /* Active text follows the reference: white progress into muted letters, no word-level dimming. */
 .lyrics.synced .lyric-line.current .lyric-glyph {
   color: transparent;
-  background-image: linear-gradient(90deg,#fafafa calc(var(--glyph-fill,0%) - 20%),#92929c calc(var(--glyph-fill,0%) + 20%));
+  background-image: linear-gradient(90deg,#fafafa calc(var(--glyph-fill,-20%) - 20%),#92929c calc(var(--glyph-fill,-20%) + 20%));
   background-clip: text;
   -webkit-background-clip: text;
   opacity: 1;
