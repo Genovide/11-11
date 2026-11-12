@@ -58,5 +58,6 @@ nav.addEventListener('click',e=>{if(e.target.closest('[data-view]'))leave()},tru
 $('search').addEventListener('input',()=>{if($('search').value.trim()){leave();render()}});
 const back=node('button','dashboard-back');back.append(icon('back'));back.title='Назад';back.setAttribute('aria-label','Назад');back.onclick=navigateBack;document.querySelector('.topline').prepend(back);
 const oldOpenArtist=openArtist;openArtist=function(name){leave();oldOpenArtist(name)};
+window.addEventListener('track-card-changed',event=>{const updated=event.detail;if(!updated?.id)return;for(const track of randomRemote)if(track.id===updated.id)Object.assign(track,updated);const previous=historyRemote.get(updated.id);if(previous)Object.assign(previous,updated)});
 render();if(randomTab==='soundcloud')refreshRemoteRandom();
 })();

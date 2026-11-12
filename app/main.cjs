@@ -24,15 +24,15 @@ let quitting=false;const rendererErrors=[];
 async function startupLog(message){try{const dir=app.getPath('userData');await fs.mkdir(dir,{recursive:true});await fs.appendFile(path.join(dir,'startup.log'),new Date().toISOString()+' '+message+'\n')}catch{}}
 async function startupFailure(error){await startupLog(error.stack||String(error));dialog.showErrorBox('SoundSync — ошибка запуска',String(error.message||error)+'\n\nПодробности: '+path.join(app.getPath('userData'),'startup.log'));app.quit()}
 ipcMain.on('renderer-diagnostic',(event,payload)=>{if(win&&event.sender===win.webContents){rendererErrors.push(payload);startupLog('Renderer: '+JSON.stringify(payload))}});
-app.on('before-quit',event=>{if(!quitting){event.preventDefault();quitting=true;Promise.allSettled([uiThemeWrites,soundcloud?.flush?.()]).finally(()=>app.quit())}});app.on('activate',()=>{if(win&&!win.isDestroyed())win.show()});
+app.on('before-quit',event=>{if(!quitting){event.preventDefault();quitting=true;Promise.allSettled([uiThemeWrites,soundcloud?.flush?.(),trackCards?.flush?.()]).finally(()=>app.quit())}});app.on('activate',()=>{if(win&&!win.isDestroyed())win.show()});
 
 protocol.registerSchemesAsPrivileged([{scheme:'lumen',privileges:{standard:true,secure:true,supportFetchAPI:true,stream:true,corsEnabled:true,bypassCSP:false}}]);
-let soundcloud,alignmentEngine,lyricsStore,libraryMetadata;let win,library={folder:'',tracks:[]},allowed=new Map(),scanBusy=false;
+let soundcloud,alignmentEngine,lyricsStore,libraryMetadata,trackCards;let win,library={folder:'',tracks:[]},allowed=new Map(),scanBusy=false;
 const smoke=false;
-function allow(){allowed=new Map();for(const t of library.tracks){allowed.set(t.id,t.path);if(t.cover)allowed.set(t.id+'-cover',t.cover)}}
+function allow(){if(trackCards)library.tracks.forEach(trackCards.restore);allowed=new Map();for(const t of library.tracks){allowed.set(t.id,t.path);if(t.cover)allowed.set(t.id+'-cover',t.cover)}}
 const dataFile=()=>path.join(app.getPath('userData'),'library.json');
 let saveQueue=Promise.resolve();
-async function save(){const snapshot=JSON.stringify(library);saveQueue=saveQueue.catch(()=>{}).then(async()=>{await fs.mkdir(app.getPath('userData'),{recursive:true});const tmp=dataFile()+'.tmp';await fs.writeFile(tmp,snapshot);await fs.rename(tmp,dataFile())});return saveQueue}
+async function save(){if(trackCards)library.tracks.forEach(trackCards.restore);const snapshot=JSON.stringify(library);saveQueue=saveQueue.catch(()=>{}).then(async()=>{await fs.mkdir(app.getPath('userData'),{recursive:true});const tmp=dataFile()+'.tmp';await fs.writeFile(tmp,snapshot);await fs.rename(tmp,dataFile())});return saveQueue}
 async function readLocalTrack(p){
  const {parseFile}=await import('music-metadata');const m=await parseFile(p,{duration:true}),c=m.common,id=crypto.createHash('sha1').update(p).digest('hex');let cover='';
  if(c.picture?.length){const pic=c.picture[0],hash=crypto.createHash('sha1').update(pic.data).digest('hex'),dir=path.join(app.getPath('userData'),'covers');await fs.mkdir(dir,{recursive:true});cover=path.join(dir,hash+'.'+(pic.format.includes('png')?'png':'jpg'));await fs.writeFile(cover,pic.data)}
@@ -55,14 +55,16 @@ async function scan(folder){
  }finally{scanBusy=false}
 }
 app.whenReady().then(async()=>{
+ trackCards=require('./track-card.cjs')({app,ipcMain,dialog,nativeImage:require('electron').nativeImage,getWindow:()=>win,getLibrary:()=>library,getRemoteTrack:id=>soundcloud?.getTrack(id),save,refreshAllowed:allow});await trackCards.ready;
  libraryMetadata=require('./lyrics-metadata.cjs')({app,ipcMain,getLibrary:()=>library,getWindow:()=>win,save});await libraryMetadata.ready;
 
  if(smoke)await fs.appendFile(path.resolve(__dirname,'../../../../work/main-started.txt'),'\nready');
  if(smoke)app.setPath('userData',path.join(__dirname,'..','..','..','..','work','lumen-test-profile'));alignmentEngine=require('./alignment.cjs')({app,ipcMain,getLibrary:()=>library,save,send:(channel,data)=>win?.webContents.send(channel,data)});
- lyricsStore=require('./custom-lyrics.cjs')({app,ipcMain,getLibrary:()=>library,save,isAligning:id=>alignmentEngine.isAligning(id)});try{library=JSON.parse(await fs.readFile(dataFile(),'utf8'))}catch{}libraryMetadata.restore(library.tracks);await lyricsStore.restore(library.tracks);await alignmentEngine.restore(library.tracks);allow();require('./lyrics-search.cjs')({app,ipcMain});soundcloud=require('./soundcloud.cjs')({app,ipcMain,dialog,safeStorage,getWindow:()=>win,getLibrary:()=>library,save,refreshAllowed:allow,readTrack:readLocalTrack,isAligning:id=>scanBusy||alignmentEngine.isAligning(id),send:(channel,data)=>win?.webContents.send(channel,data)});
+ lyricsStore=require('./custom-lyrics.cjs')({app,ipcMain,getLibrary:()=>library,save,isAligning:id=>alignmentEngine.isAligning(id)});try{library=JSON.parse(await fs.readFile(dataFile(),'utf8'))}catch{}libraryMetadata.restore(library.tracks);await lyricsStore.restore(library.tracks);await alignmentEngine.restore(library.tracks);allow();require('./lyrics-search.cjs')({app,ipcMain});soundcloud=require('./soundcloud.cjs')({app,ipcMain,dialog,safeStorage,getWindow:()=>win,getLibrary:()=>library,save,refreshAllowed:allow,readTrack:readLocalTrack,applyTrackCard:trackCards.restore,isAligning:id=>scanBusy||alignmentEngine.isAligning(id),send:(channel,data)=>win?.webContents.send(channel,data)});
  require('./song-insight.cjs')({app,ipcMain,safeStorage,getLibrary:()=>library,getRemoteTrack:id=>soundcloud.getTrack(id)});
  require('./local-playback.cjs')({app,ipcMain,getWindow:()=>win,getLibrary:()=>library,register:(id,file)=>allowed.set(id,file)});
  protocol.handle('lumen',async request=>{
+  if(new URL(request.url).hostname==='track-cover')return trackCards.cover(request);
   if(new URL(request.url).hostname.startsWith('sc-'))return soundcloud.handleProtocol(request);
   const p=allowed.get(new URL(request.url).pathname.slice(1));if(!p)return new Response('Not found',{status:404});
   try{const {size}=await fs.stat(p);const mime={'.mp3':'audio/mpeg','.m4a':'audio/mp4','.flac':'audio/flac','.wav':'audio/wav','.ogg':'audio/ogg','.opus':'audio/ogg','.aac':'audio/aac','.jpg':'image/jpeg','.png':'image/png'}[path.extname(p).toLowerCase()]||'application/octet-stream';
@@ -79,6 +81,7 @@ app.whenReady().then(async()=>{
  ipcMain.handle('rescan',()=>scan(library.folder||''));
  ipcMain.handle('window',(_,action)=>{if(action==='minimize')win.minimize();if(action==='maximize')win.isMaximized()?win.unmaximize():win.maximize();if(action==='close')win.close()});
  win=new BrowserWindow({width:1440,height:940,minWidth:1000,minHeight:720,frame:process.platform==='darwin',backgroundColor:'#090c12',icon:path.join(__dirname,process.platform==='darwin'?'icon.png':'icon.ico'),show:false,webPreferences:{preload:path.join(__dirname,'preload.cjs'),backgroundThrottling:!process.env.SOUNDSYNC_UI_TEST_DIR,contextIsolation:true,nodeIntegration:false,sandbox:true}});
+ require('./mini-player.cjs')({app,BrowserWindow,ipcMain,screen:require('electron').screen,getWindow:()=>win});
  if(smoke)win.webContents.on('console-message',(...args)=>fs.appendFile(path.resolve(__dirname,'../../../../work/renderer-log.txt'),JSON.stringify(args.slice(1))+'\n').catch(()=>{}));
  if(smoke)await fs.appendFile(path.resolve(__dirname,'../../../../work/main-started.txt'),'\nwindow');
  win.webContents.on('console-message',(event,level,message,line,sourceId)=>{const detail=typeof event?.message==='string'?event:{level,message,lineNumber:line,sourceId};if(detail.level==='error'||detail.level>=3){rendererErrors.push({message:detail.message,source:detail.sourceId,line:detail.lineNumber});startupLog('Console: '+detail.message)}});

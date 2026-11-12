@@ -76,6 +76,32 @@ try {
  assert.equal(cards.releases.length,2);assert.equal(cards.releases[0].title,'8BALLZ');assert.equal(cards.releases[0].scores.reviews,72);assert.equal(cards.releases[0].scores.users,69);assert.equal(cards.releases[1].scores.reviews,0);
  const detail=await evaluate(`RztData.parse(${JSON.stringify('<main><h1>8BALLZ</h1><a href="/artist/booker">BOOKER</a><button><span>72</span> <span>69</span></button>'+review+card('related','Related','Other',11,22)+'</main>')},'/album/8ballz')`);
  assert.equal(detail.releases.find(t=>t.path==='/album/8ballz').scores.reviews,72);assert.equal(detail.reviews[0].author,'Reviewer');assert.equal(detail.reviews[0].score,65);assert.equal(detail.reviews[0].path,'/reviews/192216');assert.ok(!detail.reviews[0].body.includes('11.11.2026'));checks.push('RZT modern cards, zero scores, authors, review content and rating isolation');
+ // Editor and mini-player share the live library/audio, including when the main window is hidden.
+ await evaluate(`document.querySelector('[data-view="tracks"]').click();window.__cardOriginalTitle=library.tracks[0].title;openTrackMenu(library.tracks[0],document.querySelector('.track-options'));[...trackMenu.querySelectorAll('button')].find(b=>b.textContent==='Редактировать карточку').click()`);
+ const until=async expression=>{for(let attempt=0;attempt<60;attempt++){if(await evaluate(expression))return;await pause(100)}throw Error('Timed out: '+expression)};
+ await until(`document.querySelector('#track-card-dialog').open`);
+ await evaluate(`document.querySelector('#card-title').value='Карточка 1.2.6';document.querySelector('#card-year').value='2026';document.querySelector('#track-card-dialog .card-actions .primary').click()`);
+ await until(`!document.querySelector('#track-card-dialog').open`);
+ await check('Track card saves metadata through the native backend',`library.tracks[0].title==='Карточка 1.2.6'&&library.tracks[0].year===2026`);
+ await evaluate(`openTrackMenu(library.tracks[0],document.querySelector('.track-options'));[...trackMenu.querySelectorAll('button')].find(b=>b.textContent==='Редактировать карточку').click()`);
+ await until(`document.querySelector('#track-card-dialog').open&&!document.querySelector('#track-card-dialog .card-actions .quiet').disabled`);
+ await evaluate(`document.querySelector('#track-card-dialog .card-actions .quiet').click()`);await until(`!document.querySelector('#track-card-dialog').open`);
+ await check('Original track card can be restored',`library.tracks[0].title===window.__cardOriginalTitle`);
+ await evaluate(`playList(library.tracks,0)`);await pause(300);await evaluate(`$('open-mini-player').focus()`);await until(`getComputedStyle($('open-mini-player')).opacity==='1'`);
+ await check('Mini-player launcher is on the artwork and keyboard-accessible',`$('mini-cover').parentElement.contains($('open-mini-player'))&&!document.querySelector('.volume-control #open-mini-player')&&getComputedStyle($('open-mini-player')).opacity==='1'`);
+ await evaluate(`window.__miniSource=audio.src;window.lumen.miniPlayerOpen()`);
+ const targets=await(await fetch(`http://127.0.0.1:${port}/json/list`)).json(),miniTarget=targets.find(p=>p.url.endsWith('/mini-player.html'));assert.ok(miniTarget,'Native mini-player window exists');
+ const miniSocket=new WebSocket(miniTarget.webSocketDebuggerUrl);await new Promise((resolve,reject)=>{miniSocket.onopen=resolve;miniSocket.onerror=reject});let miniId=0;const miniPending=new Map();
+ miniSocket.onmessage=event=>{const message=JSON.parse(event.data);if(message.id&&miniPending.has(message.id)){const request=miniPending.get(message.id);miniPending.delete(message.id);message.error?request.reject(Error(JSON.stringify(message.error))):request.resolve(message.result)}};
+ const miniEval=expression=>new Promise((resolve,reject)=>{miniPending.set(++miniId,{resolve:result=>{if(result.exceptionDetails)reject(Error(JSON.stringify(result.exceptionDetails)));else resolve(result.result.value)},reject});miniSocket.send(JSON.stringify({id:miniId,method:'Runtime.evaluate',params:{expression,returnByValue:true,awaitPromise:true,userGesture:true}}))});
+ assert.equal(await miniEval(`document.querySelectorAll('button svg').length>=8`),true);checks.push('Mini-player uses SVG controls');
+ await miniEval(`document.querySelector('#play').click()`);await until('audio.paused');await miniEval(`document.querySelector('#play').click()`);await until('!audio.paused');
+ await miniEval(`document.querySelector('#volume').value=.25;document.querySelector('#volume').dispatchEvent(new Event('input'))`);await until('Math.abs(audio.volume-.25)<.01');
+ await miniEval(`document.querySelector('#mute').click()`);await until('audio.volume===0');await miniEval(`document.querySelector('#mute').click()`);await until('Math.abs(audio.volume-.25)<.01');
+ await miniEval(`document.querySelector('#seek').value=.5;document.querySelector('#seek').dispatchEvent(new Event('change'))`);await until('audio.currentTime>=44');checks.push('Mini-player pause, resume, volume, mute and seeking control the original audio');
+ const miniClosed=new Promise(resolve=>miniSocket.addEventListener('close',resolve,{once:true}));miniSocket.send(JSON.stringify({id:++miniId,method:'Input.dispatchKeyEvent',params:{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27}}));await Promise.race([miniClosed,pause(2500)]);
+ await check('Escape returns to the main player without restarting audio',`!audio.paused&&audio.src===window.__miniSource&&audio.currentTime>=44`);const afterMini=await(await fetch(`http://127.0.0.1:${port}/json/list`)).json();assert.equal(afterMini.some(p=>p.url.endsWith('/mini-player.html')),false);miniSocket.close();
+
  assert.equal(errors.length,0,'No renderer exceptions');checks.push('No renderer exceptions');
  fs.writeFileSync(path.join(output,'report.json'),JSON.stringify({ok:true,checks},null,2));console.log(JSON.stringify({ok:true,checks},null,2));
 } finally {socket.close()}
