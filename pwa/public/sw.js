@@ -1,4 +1,4 @@
-const CACHE='soundsync-pocket-shell-v3',FILES=['./','./index.html','./style.css','./core.js','./app.js','./player.js','./vendor/hls.light.min.js','./manifest.webmanifest','./assets/brand.svg','./assets/icon.png','./assets/statue.png'];
+const CACHE='soundsync-pocket-shell-v6',FILES=['./feedback.js','./','./index.html','./style.css','./curated.js','./assets/author-recommends.png','./core.js','./app.js','./player.js','./vendor/hls.light.min.js','./manifest.webmanifest','./assets/brand.svg','./assets/icon.png','./assets/statue.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('soundsync-pocket-shell-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',e=>{if(e.data==='SKIP_WAITING')self.skipWaiting()});

@@ -1,0 +1,58 @@
+/* Readable UI text, with independent sizing for lyrics and icon controls. */
+body { font-family: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif; font-size: 14px; }
+button,input,select,textarea { font-family: inherit; }
+.sidebar .nav { font-size: 16px; line-height: 22px; min-height: 48px; align-items: center; }
+.sidebar .nav small,.sidebar .nav #side-count { font-size: 13px; }
+.brand-caption,.section-label,.eyebrow,.playlist-eyebrow,.feedback-eyebrow,.rzt-eyebrow { font-size: 11px; line-height: 1.5; letter-spacing: 1.2px; }
+.breadcrumb,.hero-meta,.folder-card p,.folder-card .quiet,.folder-card button:not(.quiet),.effect-toggle,.search input { font-size: 14px; line-height: 1.5; }
+.primary,.outline,.alignment-button,.back-button,.insight-generate,.lyrics-view-button { font-size: 14px; line-height: 20px; }
+.track-name { font-size: 16px; line-height: 1.4; }
+.track-artist,.track-album,.track-time,.track-number { font-size: 13px; line-height: 1.5; }
+.table-head { font-size: 12px; }
+.album-card strong,.home-album strong,.home-pick strong,.playlist-card>strong { font-size: 15px; line-height: 1.4; }
+.album-card small,.home-album small,.home-pick small,.playlist-card>small,.home-random-switch button { font-size: 13px; line-height: 1.5; }
+.home-card-source { font-size: 11px; }
+.now-summary .now-heading { font-size: 11px; letter-spacing: 1.2px; }
+.now-details p,.now-details .now-artist { font-size: 14px; line-height: 1.5; }
+.alignment-label,.insight-status,.sound-caption { font-size: 13px; line-height: 1.6; }
+.now-panel .alignment-button { font-size: 13px; line-height: 20px; min-height: 42px; padding: 10px 12px; }
+.panel-tabs button { font-size: 13px; min-height: 36px; }
+.insight-disclosure>summary,.insight-disclosure .insight-text { font-size: 14px; line-height: 1.6; }
+.player-track strong { font-size: 14px; }.player-track span { font-size: 12px; line-height: 1.4; }
+.timeline span,.volume-control>span:last-child { font-size: 11px; }
+.queue button { font-size: 14px; line-height: 1.5; }.queue small { font-size: 12px; }
+.track-menu button { font-size: 14px; line-height: 20px; padding: 11px 14px; }
+.playlist-note,.playlist-picker-item,.playlist-track-play small,.playlist-track-number,.playlist-picker-item small { font-size: 13px; }
+.playlist-track-play strong { font-size: 15px; line-height: 1.4; }
+.feedback-intro,.feedback-dialog label,.feedback-dialog input:not([type=checkbox]),.feedback-dialog select,.feedback-dialog textarea,.feedback-actions button,.feedback-error,.sc-import-sample,.sc-import-dialog #sc-import-status { font-size: 14px; line-height: 1.5; }
+.feedback-privacy { font-size: 13px; line-height: 1.6; }
+.rzt-artist,.rzt-score-label,.rzt-source,.rzt-status,.rzt-footer { font-size: 13px; line-height: 1.5; }
+.rzt-footer button { font-size: 13px!important; }
+.empty p,.scan-status,.toast { font-size: 14px; line-height: 1.5; }
+#immersive .immersive-album,#immersive .reaction-control,#immersive .listening-tab,#immersive .back-button { font-size: 14px; }
+#immersive .immersive-badge { font-size: 11px; }
+#immersive .immersive-track-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+#immersive .immersive-track-actions>button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; box-sizing: border-box; height: 46px; min-height: 46px; margin: 0; padding: 12px 15px; font-size: 14px; line-height: 20px; border: 1px solid var(--ui-border); border-radius: 12px; background: var(--surface-raised); color: var(--ui-text); vertical-align: middle; }
+#immersive .immersive-track-actions>.current-track-menu { flex: 0 0 46px; width: 46px; padding: 0; font-size: 23px; line-height: 1; }
+#immersive .immersive-track-actions svg { width: 20px; height: 20px; flex-shrink: 0; }
+@media(max-width:1150px) { .playlist-actions button { font-size: 13px; }.sidebar .nav { font-size: 15px; } }
+
+/* Keep navigation within its column, including the library counter. */
+body>.sidebar,.sidebar>nav { min-width: 0; box-sizing: border-box; }
+.sidebar>nav { width: 100%; }
+.sidebar .nav { width: 100%; max-width: 100%; min-width: 0; flex-shrink: 0; gap: 9px; padding-left: 10px; padding-right: 10px; }
+.sidebar .nav #side-count { flex: 0 0 auto; white-space: nowrap; margin-left: auto; }
+@media(max-width:1150px) {
+ body { grid-template-columns: 220px minmax(0,1fr) 265px; }
+ body>.sidebar { padding-left: 10px; padding-right: 10px; }
+ .sidebar .nav { font-size: 15px; }
+}
+
+.sidebar .nav #side-count { top: 2px; line-height: 22px; }
+
+.sidebar .nav[data-view=tracks] { display: grid; grid-template-columns: 21px minmax(0,1fr) auto; column-gap: 8px; }
+.sidebar .nav[data-view=tracks]>.library-nav-label { min-width: 0; font-size: inherit; line-height: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar .nav[data-view=tracks]>#side-count { position: static; margin: 0; width: auto; min-width: 0; justify-self: end; align-self: center; line-height: inherit; }
+
+.sidebar .nav[data-view=tracks] { grid-template-columns: 21px minmax(0,1fr); }
+.sidebar .nav[data-view=tracks]>#side-count { display: none; }

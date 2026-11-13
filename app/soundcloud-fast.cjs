@@ -21,5 +21,5 @@ module.exports=function({dir,fetchImpl=fetch,mapTrack}){
   throw last||Error('No public stream');
  })}
  function score(f){return(/mpeg|mp3/i.test(f.format?.mime_type||f.preset||'')?10:0)+(f.format?.protocol==='progressive'?20:0)}
- return{search,related,resolve,lookup:async id=>remember(await api('tracks/'+encodeURIComponent(id))),raw:id=>raw.get(String(id)),clear:()=>{cache.clear()}};
+ return{playlist:async url=>require('./soundcloud-playlist-import.cjs').readPlaylist(await require('./soundcloud-short-link.cjs')(url,{fetchImpl}),{api,mapTrack:remember}),likes:async(url,options={})=>require('./soundcloud-likes-import.cjs').readLikes(await require('./soundcloud-short-link.cjs')(url,{fetchImpl,cancelled:options.cancelled}),{api,mapTrack:remember,...options}),search,related,resolve,lookup:async id=>remember(await api('tracks/'+encodeURIComponent(id))),raw:id=>raw.get(String(id)),clear:()=>{cache.clear()}};
 };

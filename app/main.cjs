@@ -61,6 +61,8 @@ app.whenReady().then(async()=>{
  if(smoke)await fs.appendFile(path.resolve(__dirname,'../../../../work/main-started.txt'),'\nready');
  if(smoke)app.setPath('userData',path.join(__dirname,'..','..','..','..','work','lumen-test-profile'));alignmentEngine=require('./alignment.cjs')({app,ipcMain,getLibrary:()=>library,save,send:(channel,data)=>win?.webContents.send(channel,data)});
  lyricsStore=require('./custom-lyrics.cjs')({app,ipcMain,getLibrary:()=>library,save,isAligning:id=>alignmentEngine.isAligning(id)});try{library=JSON.parse(await fs.readFile(dataFile(),'utf8'))}catch{}libraryMetadata.restore(library.tracks);await lyricsStore.restore(library.tracks);await alignmentEngine.restore(library.tracks);allow();require('./lyrics-search.cjs')({app,ipcMain});soundcloud=require('./soundcloud.cjs')({app,ipcMain,dialog,safeStorage,getWindow:()=>win,getLibrary:()=>library,save,refreshAllowed:allow,readTrack:readLocalTrack,applyTrackCard:trackCards.restore,isAligning:id=>scanBusy||alignmentEngine.isAligning(id),send:(channel,data)=>win?.webContents.send(channel,data)});
+ require('./playlists.cjs')({app,ipcMain,getWindow:()=>win,getLibrary:()=>library,getRemoteTrack:id=>soundcloud.getTrack(id),registerRemote:items=>soundcloud.register(items),readRemotePlaylist:url=>soundcloud.playlistPreview(url)});
+ require('./feedback.cjs')({ipcMain,shell:require('electron').shell,getWindow:()=>win,version:require('./package.json').version});
  require('./song-insight.cjs')({app,ipcMain,safeStorage,getLibrary:()=>library,getRemoteTrack:id=>soundcloud.getTrack(id)});
  require('./local-playback.cjs')({app,ipcMain,getWindow:()=>win,getLibrary:()=>library,register:(id,file)=>allowed.set(id,file)});
  protocol.handle('lumen',async request=>{

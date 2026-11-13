@@ -16,6 +16,7 @@ async function screenshot(name){const {data}=await call('Page.captureScreenshot'
 try {
  await call('Runtime.enable');await call('Page.enable');await call('Emulation.setFocusEmulationEnabled',{enabled:true});
  await call('Emulation.setDeviceMetricsOverride',{width:1600,height:980,deviceScaleFactor:1,mobile:false});
+ for(let ready=0;ready<100;ready++){if(await evaluate(`document.readyState==='complete'&&!!document.querySelector('.home-nav')&&typeof library!=='undefined'&&library.tracks.length>=12`))break;if(ready===99)throw Error('Player scripts did not become ready');await pause(100)}
  await evaluate(`Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});localStorage.setItem('volume','0');audio.volume=0;audio.muted=true;$('volume').value='0';$('volume').dispatchEvent(new Event('input'));document.querySelector('.home-nav').click();setFlatTheme(true);playList(library.tracks,0);getComputedStyle(document.querySelector('.now-panel')).backgroundColor`);
  await pause(1700);
  await check('Playback and cover loaded',`!audio.paused&&audio.currentTime>0&&$('now-cover').querySelector('img').naturalWidth>0`);
@@ -102,6 +103,16 @@ try {
  const miniClosed=new Promise(resolve=>miniSocket.addEventListener('close',resolve,{once:true}));miniSocket.send(JSON.stringify({id:++miniId,method:'Input.dispatchKeyEvent',params:{type:'keyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27}}));await Promise.race([miniClosed,pause(2500)]);
  await check('Escape returns to the main player without restarting audio',`!audio.paused&&audio.src===window.__miniSource&&audio.currentTime>=44`);const afterMini=await(await fetch(`http://127.0.0.1:${port}/json/list`)).json();assert.equal(afterMini.some(p=>p.url.endsWith('/mini-player.html')),false);miniSocket.close();
 
+ await call('Emulation.setDeviceMetricsOverride',{width:1600,height:980,deviceScaleFactor:1,mobile:false});
+ await evaluate(`$('feedback-open').click()`);
+ await check('General feedback form is available outside recommendations',`$('feedback-dialog').open&&typeof window.lumen.feedbackOpen==='function'&&$('feedback-type').options.length===3&&$('feedback-dialog').textContent.includes('о любой части приложения')`);
+ await evaluate(`$('feedback-title').value='Проверка формы';$('feedback-message').value='Описание общей проблемы с приложением.';$('feedback-info').checked=false`);
+ await check('Feedback allows a message without system information',`$('feedback-form').checkValidity()&&!$('feedback-info').checked&&!!$('feedback-contact')&&$('feedback-submit').textContent==='Отправить'`);
+ await screenshot('feedback-dialog');
+ await evaluate(`$('feedback-dialog').querySelector('.feedback-close').click()`);
+ await check('Feedback can close without opening GitHub',`!$('feedback-dialog').open`);
+ await call('Emulation.setDeviceMetricsOverride',{width:1000,height:720,deviceScaleFactor:1,mobile:false});
+ await check('Feedback launcher stays accessible in a short window',`(()=>{const r=$('feedback-open').getBoundingClientRect(),p=document.querySelector('.player').getBoundingClientRect();return r.top>=0&&r.bottom<=54&&r.right<=innerWidth})()`);
  assert.equal(errors.length,0,'No renderer exceptions');checks.push('No renderer exceptions');
  fs.writeFileSync(path.join(output,'report.json'),JSON.stringify({ok:true,checks},null,2));console.log(JSON.stringify({ok:true,checks},null,2));
 } finally {socket.close()}

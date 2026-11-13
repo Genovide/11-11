@@ -1,0 +1,16 @@
+{
+  "name": "soundsync-feedback",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-13",
+  "workers_dev": true,
+  "vars": {
+    "ALLOWED_ORIGINS": "https://soundsync-pocket.carvedbasil3.chatgpt.site"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "soundsync-feedback",
+      "database_id": "e602eff7-44de-4837-abf6-75cf66c1655c"
+    }
+  ]
+}
