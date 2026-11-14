@@ -185,6 +185,19 @@ module.exports = function ({ dir, fetchImpl = fetch, mapTrack }) {
     );
   }
   return {
+    playlist: async (url) =>
+      require('./soundcloud-playlist-import.cjs').readPlaylist(
+        await require('./soundcloud-short-link.cjs')(url, { fetchImpl }),
+        { api, mapTrack: remember }
+      ),
+    likes: async (url, options = {}) =>
+      require('./soundcloud-likes-import.cjs').readLikes(
+        await require('./soundcloud-short-link.cjs')(url, {
+          fetchImpl,
+          cancelled: options.cancelled,
+        }),
+        { api, mapTrack: remember, ...options }
+      ),
     search,
     related,
     resolve,

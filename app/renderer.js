@@ -26,9 +26,11 @@ const fmt = (s) => {
   return Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 };
 const media = (t, cover = false) =>
-  t.remote
-    ? 'lumen://' + (cover ? 'sc-cover' : 'sc-stream') + '/' + t.id
-    : 'lumen://media/' + t.id + (cover ? '-cover' : '');
+  cover && t.customCover
+    ? t.customCover
+    : t.remote
+      ? 'lumen://' + (cover ? 'sc-cover' : 'sc-stream') + '/' + t.id
+      : 'lumen://media/' + t.id + (cover ? '-cover' : '');
 function toast(text) {
   $('toast').textContent = text;
   $('toast').classList.remove('hidden');
@@ -42,7 +44,7 @@ function node(tag, cls, text) {
   return e;
 }
 function art(t, cls) {
-  if (t.cover) {
+  if (t.cover || t.customCover) {
     const im = node('img', cls);
     im.crossOrigin = 'anonymous';
     im.src = media(t, true);
@@ -261,8 +263,8 @@ function load(t) {
   audio.src = media(t);
   $('now-title').textContent = $('mini-title').textContent = t.title;
   $('now-artist').textContent = $('mini-artist').textContent = t.artist;
-  $('now-cover').replaceChildren(t.cover ? art(t, '') : node('span', '', '◒'));
-  $('mini-cover').replaceChildren(t.cover ? art(t, '') : node('span', '', '♪'));
+  $('now-cover').replaceChildren(t.cover || t.customCover ? art(t, '') : node('span', '', '◒'));
+  $('mini-cover').replaceChildren(t.cover || t.customCover ? art(t, '') : node('span', '', '♪'));
   $('duration').textContent = fmt(t.duration);
   updateFavorite();
   setLyrics(t);
@@ -400,7 +402,7 @@ function setPalette(t) {
   const reset = () => {
     if (current?.id === t.id) applyCoverPalette(CoverPalette.fallback);
   };
-  if (!t.cover) {
+  if (!t.cover && !t.customCover) {
     reset();
     return;
   }

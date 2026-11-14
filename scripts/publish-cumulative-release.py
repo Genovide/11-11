@@ -42,7 +42,7 @@ def main():
     notes = (ROOT / 'docs/releases' / (version + '.md')).read_text(encoding='utf-8')
     archives = [f'SoundSync-{version}-Update-{platform}-{arch}.zip'
                 for platform, arch in [('Windows', 'x64'), ('macOS', 'arm64')]]
-    pwa_source = ROOT / 'dist/SoundSync-Pocket-0.2.0-Source.zip'
+    pwa_source = ROOT / 'dist/SoundSync-Pocket-0.3.0-Source.zip'
     if pwa_source.is_file():
         archives.append(pwa_source.name)
     files = {name: (ROOT / 'dist' / name).read_bytes() for name in archives}

@@ -1,5 +1,15 @@
+import { installFeedback } from './feedback.js';
+import curated from './curated.js';
 import { createPlayer } from './player.js';
-import { soundcloudUrl, coverUrl, cleanTrack, mergeTrack, readState } from './core.js';
+import {
+  soundcloudUrl,
+  coverUrl,
+  cleanTrack,
+  mergeTrack,
+  readState,
+  importBackup,
+  exportBackup,
+} from './core.js';
 const $ = (id) => document.getElementById(id),
   key = 'soundsync-pocket-v1';
 let state;
@@ -205,6 +215,7 @@ const player = createPlayer($('embed-wrap'), {
     $('play-state').textContent = 'Играет';
     if (playedGeneration !== generation) {
       current.lastPlayed = Date.now();
+      current.playCount = (current.playCount || 0) + 1;
       playedGeneration = generation;
       save();
       render();
@@ -540,3 +551,502 @@ $('hero-add').replaceChildren(icon('play'), document.createTextNode('Запус�
 $('hero-add').onclick = () => dialog.showModal();
 render();
 if (navigator.onLine) refreshRandom();
+
+// Portable collections and personal playlists share the existing local store.
+let openPlaylist = null;
+const listsSection = element('section', 'mobile-playlists');
+listsSection.id = 'mobile-playlists';
+listsSection.hidden = true;
+$('collection-title').closest('section').before(listsSection);
+const playlistNav = element('button');
+playlistNav.dataset.view = 'playlists';
+playlistNav.append(icon('clock'), element('span', '', 'Плейлисты'));
+document.querySelector('.bottom-nav').append(playlistNav);
+playlistNav.onclick = () => {
+  openPlaylist = null;
+  navigate('playlists');
+};
+function allPlaylists() {
+  return [
+    ...curated.map((p) => ({ ...p, builtin: true, tracks: p.tracks.map(cleanTrack) })),
+    {
+      id: 'builtin:frequent',
+      name: 'Часто слушаю',
+      builtin: true,
+      tracks: state.tracks
+        .filter((t) => t.playCount > 0)
+        .sort((a, b) => b.playCount - a.playCount || b.lastPlayed - a.lastPlayed)
+        .slice(0, 100),
+    },
+    ...state.playlists.map((p) => ({
+      ...p,
+      tracks: p.urls.map((u) => state.tracks.find((t) => t.url === u)).filter(Boolean),
+    })),
+  ];
+}
+function commit(next) {
+  const old = state;
+  state = next;
+  if (!save()) {
+    state = old;
+    throw Error('Не удалось сохранить. Освободи место в браузере.');
+  }
+  if (current) current = state.tracks.find((t) => t.url === current.url) || current;
+  render();
+  paintPlayer();
+}
+function createList(name) {
+  name = String(name || '').trim();
+  if (!name || name.length > 100) throw Error('Название должно содержать от 1 до 100 символов.');
+  if (state.playlists.length >= 200) throw Error('Поддерживается до 200 плейлистов.');
+  const p = { id: crypto.randomUUID(), name, urls: [] };
+  return p;
+}
+const modal = (title) => {
+  const d = element('dialog', 'sheet collection-sheet'),
+    head = element('div', 'sheet-heading'),
+    h = element('h2', '', title),
+    close = element('button', 'icon-button', '×');
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Закрыть');
+  close.onclick = () => d.close();
+  head.append(h, close);
+  d.append(head);
+  document.body.append(d);
+  return d;
+};
+const nameSheet = modal('Новый плейлист'),
+  nameForm = element('form'),
+  nameInput = element('input'),
+  nameError = element('p', 'form-error'),
+  nameSubmit = element('button', 'primary full', 'Сохранить');
+nameInput.required = true;
+nameInput.maxLength = 100;
+nameInput.placeholder = 'Название плейлиста';
+nameInput.setAttribute('aria-label', 'Название плейлиста');
+nameForm.append(nameInput, nameError, nameSubmit);
+nameSheet.append(nameForm);
+let nameDone;
+function askName(title, value, done) {
+  nameSheet.querySelector('h2').textContent = title;
+  nameInput.value = value;
+  nameError.textContent = '';
+  nameDone = done;
+  nameSheet.showModal();
+  nameInput.focus();
+}
+nameForm.onsubmit = (e) => {
+  e.preventDefault();
+  try {
+    nameDone(nameInput.value);
+    nameSheet.close();
+  } catch (e) {
+    nameError.textContent = e.message;
+  }
+};
+const picker = modal('Добавить в плейлист'),
+  pickerBody = element('div', 'playlist-picker');
+picker.append(pickerBody);
+function addToList(t) {
+  pickerBody.replaceChildren();
+  const add = (id) => {
+    const next = readState(JSON.stringify(state)),
+      track = mergeTrack(next.tracks, t),
+      p = next.playlists.find((p) => p.id === id);
+    if (!p.urls.includes(track.url)) p.urls.push(track.url);
+    commit(next);
+    picker.close();
+    toast('Трек добавлен в «' + p.name + '»');
+  };
+  for (const p of state.playlists) {
+    const b = element('button', 'secondary full', p.name);
+    b.onclick = () => {
+      try {
+        add(p.id);
+      } catch (e) {
+        toast(e.message);
+      }
+    };
+    pickerBody.append(b);
+  }
+  const fresh = element('button', 'primary full', '+ Создать и добавить');
+  fresh.onclick = () => {
+    picker.close();
+    askName('Новый плейлист', '', (name) => {
+      const next = readState(JSON.stringify(state)),
+        p = createList(name),
+        track = mergeTrack(next.tracks, t);
+      p.urls.push(track.url);
+      next.playlists.push(p);
+      commit(next);
+      toast('Плейлист создан');
+    });
+  };
+  pickerBody.append(fresh);
+  picker.showModal();
+}
+const menuSheet = modal('Действия с треком'),
+  menuBody = element('div', 'playlist-picker');
+menuSheet.append(menuBody);
+function trackOptions(t) {
+  menuBody.replaceChildren();
+  menuSheet.querySelector('h2').textContent = t.title;
+  const add = element('button', 'secondary full', 'Добавить в плейлист');
+  add.onclick = () => {
+    menuSheet.close();
+    addToList(t);
+  };
+  menuBody.append(add);
+  const p = state.playlists.find((p) => p.id === openPlaylist);
+  if (view === 'playlists' && p) {
+    const remove = element('button', 'secondary full', 'Убрать из плейлиста');
+    remove.onclick = () => {
+      const next = readState(JSON.stringify(state));
+      next.playlists.find((x) => x.id === p.id).urls = p.urls.filter((u) => u !== t.url);
+      commit(next);
+      menuSheet.close();
+    };
+    menuBody.append(remove);
+  }
+  menuSheet.showModal();
+}
+const collectionRow = row;
+row = function (t, list) {
+  const r = collectionRow(t, list),
+    more = element('button', 'icon-button track-more', '⋯');
+  more.setAttribute('aria-label', 'Действия с треком ' + t.title);
+  more.onclick = () => trackOptions(t);
+  r.append(more);
+  return r;
+};
+function drawPlaylists() {
+  listsSection.replaceChildren();
+  const head = element('div', 'section-heading'),
+    title = element('h2', '', 'Плейлисты'),
+    create = element('button', 'text-button', '+ Создать');
+  create.onclick = () =>
+    askName('Новый плейлист', '', (name) => {
+      const next = readState(JSON.stringify(state)),
+        p = createList(name);
+      next.playlists.push(p);
+      openPlaylist = p.id;
+      commit(next);
+    });
+  head.append(title, create);
+  listsSection.append(head);
+  const data = allPlaylists();
+  if (!openPlaylist) {
+    const grid = element('div', 'mobile-playlist-grid');
+    for (const p of data) {
+      const card = element('button', 'mobile-playlist-card');
+      if (p.cover) {
+        const img = element('img');
+        img.src = p.cover;
+        img.alt = p.name;
+        card.append(img);
+      } else {
+        const art = element('div', 'mobile-playlist-art', p.id === 'builtin:frequent' ? '↻' : '♫');
+        card.append(art);
+      }
+      card.append(element('strong', '', p.name), element('small', '', p.tracks.length + ' треков'));
+      card.onclick = () => {
+        openPlaylist = p.id;
+        render();
+      };
+      grid.append(card);
+    }
+    listsSection.append(grid);
+    const remote = element('button', 'secondary full', 'Импорт из SoundCloud');
+    remote.onclick = () => openRemote('playlist');
+    listsSection.append(remote);
+    return;
+  }
+  const p = data.find((p) => p.id === openPlaylist);
+  if (!p) {
+    openPlaylist = null;
+    drawPlaylists();
+    return;
+  }
+  title.textContent = p.name;
+  create.textContent = '← Все';
+  create.onclick = () => {
+    openPlaylist = null;
+    render();
+  };
+  if (p.cover) {
+    const img = element('img', 'author-playlist-cover');
+    img.src = p.cover;
+    img.alt = p.name;
+    listsSection.append(img);
+  }
+  const tools = element('div', 'collection-tools'),
+    play = element('button', 'primary', 'Слушать'),
+    shuffle = element('button', 'secondary', 'Перемешать');
+  const start = (list) => {
+    if (!list.length) return;
+    station = null;
+    $('wave-banner').hidden = true;
+    queue = list;
+    queueIndex = 0;
+    playTrack(list[0]);
+  };
+  play.disabled = shuffle.disabled = !p.tracks.length;
+  play.onclick = () => start([...p.tracks]);
+  shuffle.onclick = () => {
+    const list = [...p.tracks];
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    start(list);
+  };
+  tools.append(play, shuffle);
+  if (!p.builtin) {
+    const rename = element('button', 'text-button', 'Переименовать'),
+      remove = element('button', 'text-button', 'Удалить');
+    rename.onclick = () =>
+      askName('Название плейлиста', p.name, (name) => {
+        const next = readState(JSON.stringify(state));
+        const value = String(name).trim();
+        if (!value || value.length > 100)
+          throw Error('Название должно содержать от 1 до 100 символов.');
+        next.playlists.find((x) => x.id === p.id).name = value;
+        commit(next);
+      });
+    remove.onclick = () => {
+      if (!confirm('Удалить плейлист «' + p.name + '»? Треки и любимое сохранятся.')) return;
+      const next = readState(JSON.stringify(state));
+      next.playlists = next.playlists.filter((x) => x.id !== p.id);
+      openPlaylist = null;
+      commit(next);
+    };
+    const share = element('button', 'text-button', 'Экспорт');
+    share.onclick = () =>
+      downloadBackup(
+        {
+          type: 'soundsync-backup',
+          version: 2,
+          tracks: p.tracks,
+          playlists: [{ id: p.id, name: p.name, urls: p.tracks.map((t) => t.url) }],
+        },
+        'SoundSync-playlist.json'
+      );
+    tools.append(rename, share, remove);
+  }
+  listsSection.append(tools);
+  if (!p.tracks.length)
+    listsSection.append(
+      element(
+        'p',
+        'field-help',
+        p.builtin
+          ? 'Здесь появятся часто запускаемые треки.'
+          : 'Добавь треки через ⋯ → «Добавить в плейлист».'
+      )
+    );
+  const rows = element('div', 'track-list');
+  rows.append(...p.tracks.map((t) => row(t, p.tracks)));
+  listsSection.append(rows);
+}
+const baseCollectionRender = render;
+render = function () {
+  baseCollectionRender();
+  const visible = view === 'playlists';
+  listsSection.hidden = !visible;
+  $('collection-title').closest('section').hidden = visible;
+  if (visible) drawPlaylists();
+};
+const remoteSheet = modal('Импорт из SoundCloud'),
+  remoteForm = element('form'),
+  remoteKind = element('select'),
+  remoteUrl = element('input'),
+  remoteStatus = element('p', 'field-help'),
+  remotePreview = element('div', 'import-preview'),
+  remoteLoad = element('button', 'secondary full', 'Загрузить список'),
+  remoteApply = element('button', 'primary full', 'Добавить');
+for (const [k, label] of [
+  ['likes', 'Лайки профиля → Любимое'],
+  ['playlist', 'Готовый плейлист'],
+]) {
+  const o = element('option', '', label);
+  o.value = k;
+  remoteKind.append(o);
+}
+remoteKind.setAttribute('aria-label', 'Что импортировать');
+remoteUrl.type = 'url';
+remoteUrl.required = true;
+remoteUrl.placeholder = 'https://soundcloud.com/…';
+remoteUrl.setAttribute('aria-label', 'Публичная ссылка SoundCloud');
+remoteApply.type = 'button';
+remoteApply.hidden = true;
+remoteForm.append(remoteKind, remoteUrl, remoteLoad, remoteStatus, remotePreview, remoteApply);
+remoteSheet.append(remoteForm);
+let remoteResult = null,
+  remoteGeneration = 0;
+function openRemote(kind = 'likes') {
+  remoteKind.value = kind;
+  remoteResult = null;
+  remoteApply.hidden = true;
+  remoteStatus.textContent =
+    'Публичные лайки и плейлисты. Подойдут и короткие ссылки on.soundcloud.com. Музыка не скачивается.';
+  remotePreview.replaceChildren();
+  remoteSheet.showModal();
+}
+function resetRemote() {
+  remoteGeneration++;
+  remoteResult = null;
+  remoteApply.hidden = true;
+}
+remoteUrl.oninput = remoteKind.onchange = resetRemote;
+remoteSheet.addEventListener('close', resetRemote);
+remoteForm.onsubmit = async (e) => {
+  e.preventDefault();
+  resetRemote();
+  const generation = remoteGeneration;
+  remoteLoad.disabled = true;
+  remoteStatus.textContent = 'Загружаем список…';
+  remotePreview.replaceChildren();
+  try {
+    const result = await api('import', { kind: remoteKind.value, url: remoteUrl.value });
+    if (generation !== remoteGeneration) return;
+    result.tracks = result.tracks.map(cleanTrack);
+    remoteResult = result;
+    const count = result.tracks.length,
+      existing = result.tracks.filter((t) =>
+        state.tracks.some((x) => x.url === t.url && x.liked)
+      ).length;
+    remoteStatus.textContent =
+      result.kind === 'likes'
+        ? `${result.name}: ${count} доступных, уже в любимом ${existing}. Недоступных пропущено: ${result.unavailable || 0}.`
+        : `${result.name}: ${count} треков. Недоступных пропущено: ${result.unavailable || 0}.`;
+    for (const t of result.tracks.slice(0, 5))
+      remotePreview.append(element('p', '', t.title + ' — ' + t.artist));
+    remoteApply.textContent = result.kind === 'likes' ? 'Добавить в любимое' : 'Создать плейлист';
+    remoteApply.hidden = !count;
+  } catch (e) {
+    if (generation === remoteGeneration) remoteStatus.textContent = e.message;
+  } finally {
+    remoteLoad.disabled = false;
+  }
+};
+remoteApply.onclick = () => {
+  if (!remoteResult) return;
+  try {
+    const next = readState(JSON.stringify(state)),
+      r = remoteResult,
+      urls = [];
+    for (const t of r.tracks) {
+      const saved = mergeTrack(next.tracks, { ...t, liked: r.kind === 'likes' });
+      urls.push(saved.url);
+    }
+    if (r.kind === 'playlist') {
+      const p = createList(r.name);
+      p.urls = [...new Set(urls)];
+      next.playlists.push(p);
+      openPlaylist = p.id;
+    }
+    commit(next);
+    remoteSheet.close();
+    if (r.kind === 'playlist') navigate('playlists');
+    toast('Импорт завершён');
+  } catch (e) {
+    remoteStatus.textContent = e.message;
+  }
+};
+const transferTools = element('div', 'collection-tools'),
+  importButton = element('button', 'secondary', 'Импорт'),
+  exportButton = element('button', 'secondary', 'Экспорт');
+transferTools.append(importButton, exportButton);
+$('collection-title').closest('.section-heading').after(transferTools);
+importButton.onclick = () => openRemote('likes');
+async function downloadBackup(
+  payload = exportBackup(state),
+  filename = 'SoundSync-collections.json'
+) {
+  try {
+    const file = new File([JSON.stringify(payload, null, 2)], filename, {
+      type: 'application/json',
+    });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Коллекция SoundSync' });
+      return;
+    }
+    const u = URL.createObjectURL(file),
+      a = element('a');
+    a.href = u;
+    a.download = file.name;
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 30000);
+  } catch (e) {
+    if (e.name !== 'AbortError') toast(e.message);
+  }
+}
+exportButton.onclick = () => downloadBackup();
+$('export-favorites').textContent = 'Экспорт любимого и плейлистов';
+$('export-favorites').onclick = () => downloadBackup();
+$('import-favorites').closest('label').firstChild.textContent = 'Импорт из файла';
+$('import-favorites').onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    if (file.size > 10 * 1024 * 1024) throw Error('Файл слишком большой (максимум 10 МБ).');
+    const next = importBackup(state, JSON.parse(await file.text()));
+    if (
+      !confirm(
+        `Объединить коллекцию из файла? Будет ${next.tracks.filter((t) => t.liked).length} любимых треков и ${next.playlists.length} своих плейлистов. Текущие данные сохранятся.`
+      )
+    )
+      return;
+    commit(next);
+    toast('Коллекция восстановлена');
+  } catch (e) {
+    toast(e.message);
+  } finally {
+    e.target.value = '';
+  }
+};
+const fileImportButton = element('button', 'secondary full', 'Импорт из файла SoundSync');
+fileImportButton.onclick = () => {
+  remoteSheet.close();
+  $('import-favorites').click();
+};
+remoteSheet.append(fileImportButton);
+const remoteSettings = element('button', 'secondary full', 'Импорт из SoundCloud');
+remoteSettings.onclick = () => {
+  $('settings-dialog').close();
+  openRemote('likes');
+};
+$('export-favorites').before(remoteSettings);
+// Close sheets only when the gesture starts and ends outside their bounds.
+let outsideDialog = null;
+const isOutside = (e, d) => {
+  const r = d.getBoundingClientRect();
+  return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+};
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    outsideDialog =
+      e.button === 0 && e.target instanceof HTMLDialogElement && isOutside(e, e.target)
+        ? e.target
+        : null;
+  },
+  true
+);
+document.addEventListener(
+  'click',
+  (e) => {
+    const d = outsideDialog;
+    outsideDialog = null;
+    if (d && e.target === d && isOutside(e, d)) {
+      e.preventDefault();
+      if (d.dispatchEvent(new Event('cancel', { cancelable: true }))) d.close();
+    }
+  },
+  true
+);
+render();
+
+installFeedback(toast);
