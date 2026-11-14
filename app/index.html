@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="soundsync.css" />
     <link rel="stylesheet" href="dashboard.css" />
     <link rel="stylesheet" href="interface.css" />
+    <link rel="stylesheet" href="upgrader.css" />
     <link rel="icon" type="image/png" href="icon.png" />
   </head>
   <body>
@@ -49,6 +50,8 @@
           <span>◈</span>Моя музыка <small id="side-count">0</small></button
         ><button class="nav" data-view="albums"><span>▦</span>Альбомы</button
         ><button class="nav" data-view="favorites"><span>♡</span>Любимое</button
+        ><button id="upgrader-open" class="nav" type="button" title="Прокачай трек под свой вкус">
+          <span>⇪</span>Апгрейдер</button
         ><button
           id="rzt-reviews"
           class="nav"
@@ -260,5 +263,7 @@
     <script src="interface.js"></script>
     <script src="mixed-playback.js"></script>
     <script src="local-playback.js"></script>
+    <script src="taste-model.js"></script>
+    <script src="upgrader.js"></script>
   </body>
 </html>
