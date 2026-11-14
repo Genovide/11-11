@@ -87,7 +87,6 @@
     const span = element.firstElementChild;
     if (span?.tagName === 'SPAN' && glyph(span.textContent)) span.replaceWith(icon(name));
   }
-  leadingGlyphToIcon(document.getElementById('effects'), 'sparkle');
   leadingGlyphToIcon(document.getElementById('play-all'), 'play');
   leadingGlyphToIcon(document.getElementById('shuffle-all'), 'shuffle');
   const clearFilter = document.getElementById('clear-filter');
