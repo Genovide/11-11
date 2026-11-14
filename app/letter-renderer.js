@@ -21,7 +21,8 @@ function glyphGroup(element, text, start, duration, fill) {
     element.append(span);
     glyphs.push(span);
   }
-  return { glyphs, start, duration, fill, text, element };
+  const visibleCount = glyphs.filter((span) => span.textContent.trim()).length;
+  return { glyphs, start, duration, fill, text, element, visibleCount, halo: null };
 }
 const setLyricsBeforeLetters = setLyrics;
 setLyrics = function (t) {
@@ -78,8 +79,16 @@ setLyrics = function (t) {
       button.classList.add('letter-decorative');
     }
   }
-  paintLyricLetters(audio.currentTime);
+  paintLyricLetters(lyricTime());
 };
+// Обновляем свечение слова только при изменении: проход идёт по всем словам песни каждый кадр.
+function setHalo(group, value) {
+  if (group.halo === value) return;
+  group.halo = value;
+  group.element.style.setProperty('--word-halo', value);
+  // Фильтр свечения дорогой: держим его только на словах, которые сейчас светятся.
+  group.element.classList.toggle('glow', Number(value) > 0.001);
+}
 function paintLyricLetters(time) {
   const motion = effect && !reduced;
   for (const group of lyricGlyphGroups) {
@@ -87,7 +96,7 @@ function paintLyricLetters(time) {
       group.reset = null;
       const completed =
         group.uncertain && !lyricBox.classList.contains('manual-gap') && time >= group.completeAt;
-      group.element.style.setProperty('--word-halo', '0');
+      setHalo(group, '0');
       for (const span of group.glyphs) {
         span.style.transform = '';
         span.style.textShadow = '';
@@ -101,7 +110,7 @@ function paintLyricLetters(time) {
     const wordGlow = motion
       ? glowIn * glowIn * (3 - 2 * glowIn) * glowOut * glowOut * (3 - 2 * glowOut)
       : 0;
-    group.element.style.setProperty('--word-halo', wordGlow.toFixed(3));
+    setHalo(group, wordGlow.toFixed(3));
     if (elapsed < -0.15 || elapsed > group.duration + 1.6) {
       const state = elapsed > 0 ? 'past' : 'future';
       if (group.reset !== state) {
@@ -116,7 +125,7 @@ function paintLyricLetters(time) {
       continue;
     }
     group.reset = false;
-    const visibleCount = group.glyphs.filter((span) => span.textContent.trim()).length;
+    const visibleCount = group.visibleCount;
     let visibleIndex = 0;
     group.glyphs.forEach((span, j) => {
       const pose =
@@ -145,8 +154,9 @@ function refreshLettersAfterSeek() {
   for (const group of lyricGlyphGroups) group.reset = null;
   lyricScrollVelocity = 0;
   activeLine = -1;
+  lastLyricPaint = -1;
   syncLyrics();
-  paintLyricWords(audio.currentTime);
+  paintLyricWords(lyricTime());
 }
 audio.addEventListener('seeking', refreshLettersAfterSeek);
 audio.addEventListener('seeked', refreshLettersAfterSeek);

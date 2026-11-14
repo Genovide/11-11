@@ -39,6 +39,8 @@
     } catch {}
   if (['library', 'soundcloud'].includes(saved.randomSourceChoice))
     initial.randomSourceChoice = saved.randomSourceChoice;
+  if (Number.isInteger(saved.lyricsOffsetMs) && Math.abs(saved.lyricsOffsetMs) <= 2000)
+    initial.lyricsOffsetMs = saved.lyricsOffsetMs;
   if (Array.isArray(saved.playedTrackKeys))
     initial.playedTrackKeys = saved.playedTrackKeys.filter((id) => typeof id === 'string');
   else {

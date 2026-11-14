@@ -14,6 +14,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test:lyrics": "node scripts/test-lyrics-timing.cjs",
     "test:taste": "node scripts/test-taste-model.cjs"
   },
   "devDependencies": {

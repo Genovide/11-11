@@ -15,7 +15,7 @@
     const id = key(current);
     if (heard.has(id)) return;
     heard.add(id);
-    window.lumen.preferencesSet({ playedTrackKeys: [...heard] }).catch(() => {});
+    window.lumen.preferencesSet({ addPlayedTrackKeys: [id] }).catch(() => {});
   }
   audio.addEventListener('playing', recordHeard);
   function stopMix() {
