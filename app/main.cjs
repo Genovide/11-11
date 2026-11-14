@@ -141,16 +141,32 @@ ipcMain.on('renderer-diagnostic', (event, payload) => {
     startupLog('Renderer: ' + JSON.stringify(payload));
   }
 });
+// Выход: сначала дописываем настройки и списки, затем завершаемся. Раньше на Mac после долгой
+// работы Cmd+Q иногда прятал окно, но процесс оставался (точка в Доке). Теперь окна прячутся
+// сразу, ожидание записи ограничено, а сторож гарантированно завершает процесс и пишет в журнал,
+// на каком этапе выход застрял.
+let quitStage = '';
 app.on('before-quit', (event) => {
-  if (!quitting) {
-    event.preventDefault();
-    quitting = true;
-    Promise.allSettled([
-      flushUiPreferences(),
-      soundcloud?.flush?.(),
-      trackCards?.flush?.(),
-    ]).finally(() => app.quit());
-  }
+  if (quitting) return;
+  event.preventDefault();
+  quitting = true;
+  quitStage = 'flush';
+  for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) window.hide();
+  setTimeout(() => {
+    startupLog('Quit watchdog: process was still alive at stage "' + quitStage + '"').finally(() =>
+      app.exit(0)
+    );
+  }, 5000).unref?.();
+  Promise.race([
+    Promise.allSettled([flushUiPreferences(), soundcloud?.flush?.(), trackCards?.flush?.()]),
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]).finally(() => {
+    quitStage = 'closing windows';
+    app.quit();
+  });
+});
+app.on('will-quit', () => {
+  quitStage = 'will-quit';
 });
 app.on('activate', () => {
   if (win && !win.isDestroyed()) win.show();
@@ -660,6 +676,12 @@ app
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-require('./updates.cjs')({ ipcMain, shell: require('electron').shell, version: app.getVersion() });
+require('./updates.cjs')({
+  app,
+  ipcMain,
+  shell: require('electron').shell,
+  version: app.getVersion(),
+  getWindow: () => win,
+});
 
 require('./rzt-reviews.cjs')({ app, ipcMain, BrowserWindow, getWindow: () => win });

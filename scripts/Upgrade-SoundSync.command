@@ -99,12 +99,16 @@ if $INTERACTIVE; then
   fi
 fi
 
-if pgrep -x SoundSync >/dev/null || pgrep -x '11-11' >/dev/null; then
+# Запущен ли именно этот плеер: смотрим только процессы, чей исполняемый файл внутри него.
+# Так копия приложения в другой папке не мешает обновлению, а передатчик обновления,
+# у которого путь к плееру лишь в аргументах, не считается плеером.
+app_running() { ps -axo comm= | grep -qF "$OLD/Contents/"; }
+if app_running; then
   if $INTERACTIVE && [ "$(dialog 'SoundSync сейчас открыт. Закрыть его и продолжить обновление?' 'Отмена|Закрыть и продолжить' 'Закрыть и продолжить')" = 'Закрыть и продолжить' ]; then
-    osascript -e 'tell application "SoundSync" to quit' >/dev/null 2>&1 || true
-    for _ in $(seq 1 30); do pgrep -x SoundSync >/dev/null || break; sleep 0.5; done
+    osascript -e "tell application \"$OLD\" to quit" >/dev/null 2>&1 || true
+    for _ in $(seq 1 60); do app_running || break; sleep 0.5; done
   fi
-  if pgrep -x SoundSync >/dev/null || pgrep -x '11-11' >/dev/null; then
+  if app_running; then
     say "  ${R}✗${N} Полностью закрой плеер через меню приложения"
     exit 1
   fi
