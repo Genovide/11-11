@@ -1,0 +1,471 @@
+/* Обновление интерфейса: единые иконки, понятные ползунки, анимации.
+   Подключается последним и переопределяет только то, что нужно. */
+:root {
+  --ui-accent: var(--accent, #ffd629);
+  --ui-ease: cubic-bezier(0.2, 0.9, 0.25, 1);
+  --ui-track: #ffffff1c;
+  --ui-buffer: #ffffff33;
+}
+
+/* ——— Иконки ——— */
+.nav svg,
+.search > span svg,
+.effect-toggle svg,
+.theme-switch svg,
+#play-all svg,
+#shuffle-all svg,
+#clear-filter svg,
+.volume-mute svg,
+.mini-cover > svg,
+.mini-cover > span > svg,
+.pick-symbol > svg {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  display: block;
+}
+.nav .nav-icon {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 20px !important;
+  transition: transform 220ms var(--ui-ease);
+}
+.nav:hover .nav-icon {
+  transform: translateX(2px) scale(1.06);
+}
+.nav.active .nav-icon svg {
+  stroke-width: 2.1;
+}
+.nav {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 160ms ease;
+}
+.nav:active {
+  transform: scale(0.985);
+}
+.search > span {
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  opacity: 0.7;
+}
+.search:focus-within > span {
+  opacity: 1;
+  color: var(--ui-accent);
+}
+.effect-toggle:not(.hidden),
+.theme-switch:not(.hidden),
+#play-all:not(.hidden),
+#shuffle-all:not(.hidden),
+#clear-filter:not(.hidden) {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+}
+.effect-toggle svg,
+.theme-switch svg {
+  font-size: 16px;
+}
+#play-all svg,
+#shuffle-all svg {
+  font-size: 17px;
+}
+.mini-cover.cover-placeholder {
+  display: grid;
+  place-items: center;
+  color: #ffffff70;
+  font-size: 24px;
+  background: linear-gradient(135deg, #2a2a2e, #18181b);
+}
+.mini-cover.cover-swap {
+  animation: ui-cover-swap 420ms var(--ui-ease);
+}
+@keyframes ui-cover-swap {
+  from {
+    opacity: 0.2;
+    transform: scale(0.86) rotate(-4deg);
+  }
+}
+
+/* ——— Перемотка ——— */
+.timeline.timeline-refresh {
+  gap: 12px;
+}
+.timeline.timeline-refresh > span {
+  width: 46px !important;
+  font-size: 12px !important;
+  color: #a7a59c !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.2px;
+}
+.timeline.timeline-refresh > span:first-child {
+  text-align: right;
+}
+.timeline.timeline-refresh > span:last-child {
+  text-align: left;
+}
+.duration-toggle {
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 150ms ease;
+}
+.duration-toggle:hover {
+  color: #f2efe6 !important;
+}
+.seek-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  display: flex;
+  align-items: center;
+}
+.seek-wrap #seek,
+.volume-refresh #volume {
+  --fill: 0%;
+  --buffer: 0%;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  background: transparent !important;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.seek-wrap #seek::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--ui-accent) 0 var(--fill),
+    var(--ui-buffer) var(--fill) var(--buffer),
+    var(--ui-track) var(--buffer) 100%
+  );
+  transition: height 160ms var(--ui-ease);
+}
+.seek-wrap:hover #seek::-webkit-slider-runnable-track,
+.seek-wrap.dragging #seek::-webkit-slider-runnable-track {
+  height: 6px;
+}
+.seek-wrap #seek::-webkit-slider-thumb,
+.volume-refresh #volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: #fff;
+  border: 0;
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--ui-accent) 35%, transparent),
+    0 2px 6px #0008;
+  transform: scale(0);
+  transition: transform 160ms var(--ui-ease);
+}
+.seek-wrap:hover #seek::-webkit-slider-thumb,
+.seek-wrap.dragging #seek::-webkit-slider-thumb,
+.seek-wrap #seek:focus-visible::-webkit-slider-thumb {
+  transform: scale(1);
+}
+.seek-wrap:hover #seek::-webkit-slider-thumb,
+.seek-wrap.dragging #seek::-webkit-slider-thumb {
+  margin-top: -4px;
+}
+.seek-bubble {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  transform: translateX(-50%) translateY(4px);
+  padding: 3px 7px;
+  border-radius: 7px;
+  background: #f5f3eb;
+  color: #111;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 140ms ease,
+    transform 140ms var(--ui-ease);
+  white-space: nowrap;
+}
+.seek-wrap.hovering .seek-bubble {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ——— Громкость ——— */
+.volume-control.volume-refresh {
+  gap: 8px;
+}
+.volume-refresh .volume-mute {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #cfccc2;
+  font-size: 20px;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 120ms ease;
+}
+.volume-refresh .volume-mute:hover {
+  background: #ffffff10;
+  color: #fff;
+}
+.volume-refresh .volume-mute:active {
+  transform: scale(0.92);
+}
+.volume-refresh.muted .volume-mute {
+  color: #ff8a7c;
+}
+.volume-refresh #volume {
+  width: 110px !important;
+}
+.volume-refresh #volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #f5f3eb 0 var(--fill), var(--ui-track) var(--fill) 100%);
+  transition: height 160ms var(--ui-ease);
+}
+.volume-refresh:hover #volume::-webkit-slider-runnable-track {
+  height: 6px;
+  background: linear-gradient(
+    to right,
+    var(--ui-accent) 0 var(--fill),
+    var(--ui-track) var(--fill) 100%
+  );
+}
+.volume-refresh:hover #volume::-webkit-slider-thumb {
+  transform: scale(1);
+  margin-top: -4px;
+}
+.volume-refresh #volume-value {
+  width: 38px !important;
+  font-size: 12px !important;
+  color: #a7a59c !important;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms var(--ui-ease);
+}
+.volume-refresh:hover #volume-value,
+.volume-refresh:focus-within #volume-value {
+  opacity: 1;
+  transform: none;
+}
+
+/* ——— Кнопки плеера ——— */
+.transport-buttons button,
+.player-like,
+.player-dislike {
+  transition:
+    transform 140ms var(--ui-ease),
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 200ms ease;
+}
+.transport-buttons button:hover {
+  transform: translateY(-1px);
+}
+.transport-buttons button:active {
+  transform: scale(0.9);
+}
+.transport-buttons .play-button:hover {
+  transform: scale(1.06);
+}
+.transport-buttons .play-button:active {
+  transform: scale(0.94);
+}
+body.is-playing .transport-buttons .play-button {
+  animation: ui-play-glow 2.4s ease-in-out infinite;
+}
+@keyframes ui-play-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ui-accent) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--ui-accent) 14%, transparent);
+  }
+}
+.pop {
+  animation: ui-pop 420ms var(--ui-ease);
+}
+@keyframes ui-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.32);
+  }
+  65% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ——— Строки треков ——— */
+.track-row {
+  transition:
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+.track-row:active {
+  transform: scale(0.997);
+}
+/* Играющий трек: живой эквалайзер вместо символа ♫; на паузе он замирает. */
+.track-row.playing .track-number {
+  position: relative;
+  color: transparent !important;
+  font-size: 0 !important;
+}
+.track-row.playing .track-number::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 14px;
+  translate: -50% -50%;
+  background:
+    linear-gradient(var(--ui-accent), var(--ui-accent)) 0 100% / 4px 40% no-repeat,
+    linear-gradient(var(--ui-accent), var(--ui-accent)) 6px 100% / 4px 90% no-repeat,
+    linear-gradient(var(--ui-accent), var(--ui-accent)) 12px 100% / 4px 60% no-repeat;
+}
+body.is-playing .track-row.playing .track-number::before {
+  animation: ui-eq 900ms ease-in-out infinite;
+}
+@keyframes ui-eq {
+  0%,
+  100% {
+    background-size:
+      4px 40%,
+      4px 90%,
+      4px 60%;
+  }
+  25% {
+    background-size:
+      4px 85%,
+      4px 35%,
+      4px 95%;
+  }
+  50% {
+    background-size:
+      4px 55%,
+      4px 100%,
+      4px 30%;
+  }
+  75% {
+    background-size:
+      4px 95%,
+      4px 50%,
+      4px 70%;
+  }
+}
+
+/* Смена раздела: заголовок и строки плавно появляются, первые строки — лесенкой. */
+.collection.view-enter .collection-header,
+.collection.view-enter .album-grid:not(.hidden) {
+  animation: ui-rise 360ms var(--ui-ease);
+}
+.collection.view-enter .track-row {
+  animation: ui-rise 380ms var(--ui-ease) both;
+}
+.collection.view-enter .track-row:nth-child(1) {
+  animation-delay: 0ms;
+}
+.collection.view-enter .track-row:nth-child(2) {
+  animation-delay: 25ms;
+}
+.collection.view-enter .track-row:nth-child(3) {
+  animation-delay: 50ms;
+}
+.collection.view-enter .track-row:nth-child(4) {
+  animation-delay: 75ms;
+}
+.collection.view-enter .track-row:nth-child(5) {
+  animation-delay: 100ms;
+}
+.collection.view-enter .track-row:nth-child(6) {
+  animation-delay: 125ms;
+}
+.collection.view-enter .track-row:nth-child(7) {
+  animation-delay: 150ms;
+}
+.collection.view-enter .track-row:nth-child(8) {
+  animation-delay: 175ms;
+}
+.collection.view-enter .track-row:nth-child(n + 9) {
+  animation-delay: 200ms;
+}
+@keyframes ui-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Всплывающие окна появляются мягко. */
+dialog[open] {
+  animation: ui-dialog-in 240ms var(--ui-ease);
+}
+dialog::backdrop {
+  animation: ui-fade 240ms ease;
+}
+@keyframes ui-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+}
+@keyframes ui-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Видимый фокус для клавиатуры. */
+.player button:focus-visible,
+.nav:focus-visible,
+.track-row:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 2px;
+}
+
+/* Без анимаций, если так попросила система или выключены эффекты. */
+@media (prefers-reduced-motion: reduce) {
+  .collection.view-enter *,
+  .mini-cover.cover-swap,
+  .pop,
+  dialog[open],
+  body.is-playing .transport-buttons .play-button,
+  body.is-playing .track-row.playing .track-number::before {
+    animation: none !important;
+  }
+}
+.effects-off .collection.view-enter *,
+.effects-off .mini-cover.cover-swap,
+.effects-off .pop,
+body.effects-off.is-playing .transport-buttons .play-button {
+  animation: none !important;
+}
+
+.pick-symbol > svg {
+  width: 30px;
+  height: 30px;
+}
