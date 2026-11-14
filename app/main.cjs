@@ -626,7 +626,8 @@ app
       });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (e) => e.preventDefault());
-    await win.loadFile('index.html');
+    // В тестовых прогонах (smoke, интерфейсные проверки) заставка не нужна.
+    await win.loadFile('index.html', testProfile ? { query: { nosplash: '1' } } : undefined);
     if (!process.env.SOUNDSYNC_UI_TEST_DIR) win.show();
     if (process.env.SOUNDSYNC_SMOKE_DIR) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
