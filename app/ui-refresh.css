@@ -469,3 +469,295 @@ body.effects-off.is-playing .transport-buttons .play-button {
   width: 30px;
   height: 30px;
 }
+
+/* Правая панель: блок трека получает естественную высоту, сжимается только текст песни.
+   Раньше кнопки «Текст» и «Синхронизация» уезжали под переключатель «Текст песни / Очередь». */
+body > .now-panel {
+  grid-template-rows: auto auto minmax(110px, 1fr) !important;
+}
+body > .now-panel > .now-summary {
+  overflow: visible;
+  min-height: 0;
+}
+.now-summary .now-cover {
+  width: min(100%, 25vh) !important;
+  margin-inline: auto;
+}
+.now-panel .alignment-tools {
+  margin-right: 0 !important;
+}
+.now-panel .alignment-label {
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+@media (max-height: 760px) {
+  .now-summary .now-cover {
+    width: min(100%, 20vh) !important;
+  }
+}
+
+/* Сгенерированные обложки: градиент по альбому, мягкий блик, кольца и буква. */
+.generated-art {
+  container-type: inline-size;
+  display: grid !important;
+  place-items: center;
+  overflow: hidden;
+  color: #fff !important;
+  font-weight: 800;
+  font-size: 46cqi;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 12px #0005;
+  background:
+    radial-gradient(circle at 28% 22%, #ffffff55, transparent 42%),
+    repeating-radial-gradient(circle at 115% 115%, #ffffff14 0 2px, transparent 2px 14px),
+    linear-gradient(var(--angle, 135deg), var(--g1, #ffd629), var(--g2, #ff7a18)) !important;
+}
+.mini-cover .generated-art {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.track-row:hover .generated-art {
+  filter: saturate(1.15) brightness(1.05);
+}
+
+/* Наведение на строку: вместо номера — кнопка ▶, сразу видно, что строка запускает трек. */
+.track-row:not(.playing):hover .track-number,
+.track-row:not(.playing):focus-visible .track-number {
+  position: relative;
+  color: transparent !important;
+}
+.track-row:not(.playing):hover .track-number::before,
+.track-row:not(.playing):focus-visible .track-number::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  translate: -50% -50%;
+  background: #f5f3eb;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  animation: ui-play-in 160ms var(--ui-ease);
+}
+@keyframes ui-play-in {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+/* На паузе у текущей строки при наведении тоже ▶ — продолжить. */
+body:not(.is-playing) .track-row.playing:hover .track-number::before {
+  background: var(--ui-accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  width: 18px;
+  height: 18px;
+}
+
+/* Регулировка синхронности текста. */
+.lyrics-offset {
+  display: flex;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 4px 4px 4px 12px;
+  border-radius: 12px;
+  border: 1px solid #ffffff12;
+  background: #ffffff06;
+  font-size: 12px;
+  animation: ui-rise 260ms var(--ui-ease);
+}
+.lyrics-offset.hidden {
+  display: none;
+}
+.lyrics-offset-label {
+  flex: 1;
+  color: #a7a59c;
+  letter-spacing: 0.2px;
+}
+.lyrics-offset button {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #e8e5da;
+  font: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    transform 120ms ease;
+}
+.lyrics-offset button:hover {
+  background: #ffffff12;
+}
+.lyrics-offset button:active {
+  transform: scale(0.92);
+}
+.lyrics-offset .lyrics-offset-value {
+  min-width: 70px;
+  color: #a7a59c;
+}
+.lyrics-offset .lyrics-offset-value.shifted {
+  color: var(--ui-accent);
+}
+
+/* Очередь: перетаскивание и удаление. */
+.queue-entry.queue-draggable {
+  position: relative;
+  cursor: grab;
+  padding-right: 38px !important;
+  transition:
+    background-color 140ms ease,
+    opacity 140ms ease,
+    box-shadow 140ms ease;
+}
+.queue-entry.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.queue-entry.drop-before {
+  box-shadow: inset 0 2px 0 var(--ui-accent);
+}
+.queue-entry.drop-after {
+  box-shadow: inset 0 -2px 0 var(--ui-accent);
+}
+.queue-remove {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  color: #a7a59c;
+  opacity: 0;
+  transition:
+    opacity 140ms ease,
+    background-color 140ms ease;
+}
+.queue-remove svg {
+  width: 14px;
+  height: 14px;
+}
+.queue-entry:hover .queue-remove,
+.queue-entry:focus-visible .queue-remove {
+  opacity: 1;
+}
+.queue-remove:hover {
+  background: #ffffff14;
+  color: #fff;
+}
+
+/* Уведомления. */
+#toast.toast-in:not(.hidden) {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  animation: ui-toast-in 320ms var(--ui-ease);
+}
+#toast svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  color: var(--ui-accent);
+}
+#toast.toast-problem svg {
+  color: #ff8a7c;
+}
+@keyframes ui-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px) scale(0.97);
+  }
+}
+
+/* Шпаргалка клавиш. */
+.keys-open {
+  width: 40px;
+  height: 40px;
+  display: inline-grid !important;
+  place-items: center;
+  padding: 0 !important;
+  margin-right: 8px;
+  font-size: 20px;
+}
+.keys-open svg {
+  width: 1em;
+  height: 1em;
+}
+.keys-dialog {
+  width: min(520px, calc(100vw - 40px));
+  padding: 22px 24px 18px;
+  border: 1px solid #ffffff1c;
+  border-radius: 20px;
+  background: #121214;
+  color: #f5f3eb;
+  box-shadow: 0 30px 90px #000c;
+}
+.keys-dialog::backdrop {
+  background: #0009;
+  backdrop-filter: blur(4px);
+}
+.keys-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.keys-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.keys-close {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: #ffffff0d;
+  color: inherit;
+  cursor: pointer;
+  font-size: 18px;
+}
+.keys-close svg {
+  width: 1em;
+  height: 1em;
+}
+.keys-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid #ffffff0d;
+}
+.keys-combo {
+  display: flex;
+  gap: 5px;
+  min-width: 150px;
+}
+.keys-combo kbd {
+  min-width: 26px;
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid #ffffff22;
+  border-bottom-width: 2px;
+  background: #1d1d20;
+  font: 600 12px/1.4 inherit;
+  text-align: center;
+  color: #f5f3eb;
+}
+.keys-label {
+  color: #c9c6bc;
+  font-size: 13.5px;
+}

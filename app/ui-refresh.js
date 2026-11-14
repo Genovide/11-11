@@ -29,6 +29,9 @@
     volumeHigh: 'M4 9.5h3.5L12.5 5v14l-5-4.5H4zM16 9.5a3.5 3.5 0 0 1 0 5M18.5 7a7 7 0 0 1 0 10',
     waves:
       'M3 8c3-2.5 6 2.5 9 0s6-2.5 9 0M3 12.5c3-2.5 6 2.5 9 0s6-2.5 9 0M3 17c3-2.5 6 2.5 9 0s6-2.5 9 0',
+    check: 'M20 6.5 9.5 17 4 11.5',
+    alert: 'M12 3.5 2.5 20h19L12 3.5zM12 10v4.5M12 17.3v.2',
+    keyboard: 'M3 6.5h18v11H3zM6.5 10h.01M9.5 10h.01M12.5 10h.01M15.5 10h.01M18 10h.01M7.5 14h9',
     arrowLeft: 'M19 12H5M11 6l-6 6 6 6',
     external: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
   });
@@ -125,6 +128,18 @@
   // Заглушка обложки в плеере: нота-иконка вместо символа ♪.
   const miniCover = document.getElementById('mini-cover');
   function decorateCover() {
+    if (
+      miniCover &&
+      typeof current !== 'undefined' &&
+      current &&
+      !current.cover &&
+      !current.customCover &&
+      !miniCover.querySelector('.generated-art')
+    ) {
+      miniCover.replaceChildren(generatedCover(current, 'mini-generated'));
+      miniCover.classList.remove('cover-placeholder');
+      return;
+    }
     const only = miniCover?.firstElementChild;
     if (miniCover && !miniCover.querySelector('img,svg') && glyph(miniCover.textContent)) {
       miniCover.replaceChildren(icon('note'));
@@ -143,6 +158,46 @@
       void miniCover.offsetWidth;
       miniCover.classList.add('cover-swap');
     }).observe(miniCover, { childList: true });
+
+  // ——— Обложки для треков без обложки ———
+  // Своя градиентная обложка на альбом (или трек): одинаковая при каждом показе, с первой буквой.
+  const COVER_PALETTES = [
+    ['#ffd629', '#ff7a18'],
+    ['#ff4d8d', '#7a2cff'],
+    ['#33d1ff', '#2b59ff'],
+    ['#38e8a5', '#0f8f7a'],
+    ['#ff6b5a', '#c01a5b'],
+    ['#b18cff', '#4b2bd1'],
+    ['#ffb547', '#d6338a'],
+    ['#7cf0ff', '#6a4dff'],
+  ];
+  const coverHash = (text) => {
+    let h = 2166136261;
+    for (const c of text) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+    return h >>> 0;
+  };
+  const meaningfulAlbum = (t) =>
+    t.album && !/^(Без альбома|SoundCloud Single|Unknown Album)$/i.test(t.album);
+  function generatedCover(t, cls) {
+    const name = meaningfulAlbum(t) ? t.album : t.title || '♪',
+      seed = coverHash((meaningfulAlbum(t) ? t.album + '\0' : t.title + '\0') + (t.artist || '')),
+      [a, b] = COVER_PALETTES[seed % COVER_PALETTES.length],
+      letter = ([...String(name).replace(/[^\p{L}\p{N}]/gu, '')][0] || '♪').toLocaleUpperCase('ru');
+    const e = node('div', (cls ? cls + ' ' : '') + 'generated-art', letter);
+    e.style.setProperty('--g1', a);
+    e.style.setProperty('--g2', b);
+    e.style.setProperty('--angle', (seed % 360) + 'deg');
+    e.setAttribute('aria-hidden', 'true');
+    return e;
+  }
+  const GENERATED_FOR = /(^|\s)(track-cover|album-art|home-art)(\s|$)/;
+  const artBeforeRefresh = art;
+  art = function (t, cls) {
+    if (!t?.cover && !t?.customCover && GENERATED_FOR.test(cls || ''))
+      return generatedCover(t, cls);
+    return artBeforeRefresh(t, cls);
+  };
+  window.generatedCover = generatedCover;
 
   // ——— Перемотка ———
   const seek = document.getElementById('seek'),
@@ -299,6 +354,210 @@
     );
     paintVolume();
   }
+
+  // ——— Сдвиг текста: видимая регулировка вместо одних горячих клавиш ———
+  const panelTabs = document.querySelector('.now-panel .panel-tabs'),
+    lyricsBox = document.getElementById('lyrics');
+  if (panelTabs && lyricsBox && typeof setLyricsOffset === 'function') {
+    const bar = node('div', 'lyrics-offset hidden'),
+      label = node('span', 'lyrics-offset-label'),
+      minus = node('button', 'lyrics-offset-step', '−'),
+      value = node('button', 'lyrics-offset-value'),
+      plus = node('button', 'lyrics-offset-step', '+');
+    label.textContent = 'Синхронность';
+    minus.title = 'Текст позже на 50 мс (Alt+[)';
+    plus.title = 'Текст раньше на 50 мс (Alt+])';
+    value.title = 'Сбросить сдвиг (Alt+\\)';
+    for (const b of [minus, value, plus]) b.type = 'button';
+    bar.append(label, minus, value, plus);
+    panelTabs.append(bar);
+    const paintOffset = () => {
+      const ms = Math.round((typeof lyricsOffset === 'number' ? lyricsOffset : 0) * 1000);
+      value.textContent = ms ? (ms > 0 ? '+' : '−') + Math.abs(ms) + ' мс' : '0 мс';
+      value.classList.toggle('shifted', ms !== 0);
+    };
+    const offsetBeforeRefresh = setLyricsOffset;
+    setLyricsOffset = function (seconds) {
+      offsetBeforeRefresh(seconds);
+      paintOffset();
+    };
+    minus.onclick = () => setLyricsOffset(lyricsOffset - 0.05);
+    plus.onclick = () => setLyricsOffset(lyricsOffset + 0.05);
+    value.onclick = () => setLyricsOffset(0);
+    const syncVisibility = () =>
+      bar.classList.toggle(
+        'hidden',
+        !lyricsBox.classList.contains('synced') ||
+          lyricsBox.classList.contains('hidden') ||
+          !panelTabs.contains(document.getElementById('lyrics-tab')) ||
+          !lyricsBox.closest('.now-panel')
+      );
+    new MutationObserver(syncVisibility).observe(lyricsBox, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    new MutationObserver(syncVisibility).observe(document.querySelector('.now-panel'), {
+      childList: true,
+    });
+    paintOffset();
+    syncVisibility();
+  }
+
+  // ——— Очередь: перетаскивание и удаление своих треков ———
+  if (typeof renderQueue === 'function' && typeof upNext !== 'undefined') {
+    const queueBox = document.getElementById('queue');
+    let dragFrom = -1;
+    const renderQueueBeforeRefresh = renderQueue;
+    renderQueue = function () {
+      renderQueueBeforeRefresh();
+      const entries = [...queueBox.querySelectorAll('.queue-entry')].slice(0, upNext.length);
+      entries.forEach((entry, i) => {
+        entry.draggable = true;
+        entry.classList.add('queue-draggable');
+        entry.title = 'Перетащи, чтобы изменить порядок';
+        const remove = node('span', 'queue-remove');
+        remove.replaceChildren(icon('close'));
+        remove.setAttribute('role', 'button');
+        remove.setAttribute('aria-label', 'Убрать из очереди');
+        remove.title = 'Убрать из очереди';
+        remove.onclick = (event) => {
+          event.stopPropagation();
+          upNext.splice(i, 1);
+          renderQueue();
+        };
+        entry.append(remove);
+        entry.addEventListener('dragstart', (event) => {
+          dragFrom = i;
+          entry.classList.add('dragging');
+          event.dataTransfer.effectAllowed = 'move';
+        });
+        entry.addEventListener('dragend', () => {
+          entry.classList.remove('dragging');
+          queueBox
+            .querySelectorAll('.drop-before,.drop-after')
+            .forEach((e) => e.classList.remove('drop-before', 'drop-after'));
+        });
+        entry.addEventListener('dragover', (event) => {
+          if (dragFrom < 0) return;
+          event.preventDefault();
+          const r = entry.getBoundingClientRect(),
+            after = event.clientY > r.top + r.height / 2;
+          entry.classList.toggle('drop-after', after);
+          entry.classList.toggle('drop-before', !after);
+        });
+        entry.addEventListener('dragleave', () =>
+          entry.classList.remove('drop-before', 'drop-after')
+        );
+        entry.addEventListener('drop', (event) => {
+          event.preventDefault();
+          if (dragFrom < 0) return;
+          const after = entry.classList.contains('drop-after');
+          const [moved] = upNext.splice(dragFrom, 1);
+          let to = i + (after ? 1 : 0);
+          if (dragFrom < to) to--;
+          upNext.splice(to, 0, moved);
+          dragFrom = -1;
+          renderQueue();
+        });
+      });
+    };
+  }
+
+  // ——— Уведомления: иконка по смыслу и плавное появление ———
+  const toastBox = document.getElementById('toast');
+  if (toastBox && typeof toast === 'function') {
+    const toastBeforeRefresh = toast;
+    toast = function (text) {
+      toastBeforeRefresh(text);
+      const problem = /не удалось|ошибк|недоступ|не найден|нельзя|сначала|failed|error/i.test(
+          String(text)
+        ),
+        message = node('span', 'toast-text', String(text));
+      toastBox.replaceChildren(icon(problem ? 'alert' : 'check'), message);
+      toastBox.classList.toggle('toast-problem', problem);
+      toastBox.classList.remove('toast-in');
+      void toastBox.offsetWidth;
+      toastBox.classList.add('toast-in');
+    };
+  }
+
+  // ——— Горячие клавиши: новые и шпаргалка ———
+  const shortcuts = [
+    [['Пробел'], 'Пауза / воспроизведение'],
+    [['←', '→'], 'Перемотка на 5 секунд'],
+    [['↑', '↓'], 'Громкость ±5%'],
+    [['M'], 'Выключить / включить звук'],
+    [['Ctrl', 'K'], 'Поиск'],
+    [['Alt', '←'], 'Назад'],
+    [['Alt', '[', ']'], 'Текст позже / раньше на 50 мс (с Shift — 250 мс)'],
+    [['Alt', '\\'], 'Сбросить сдвиг текста'],
+    [['Esc'], 'Выйти из полноэкранного режима'],
+    [['?'], 'Эта шпаргалка'],
+  ];
+  const keysDialog = node('dialog', 'keys-dialog');
+  keysDialog.setAttribute('aria-labelledby', 'keys-title');
+  const keysTitle = node('h2', '', 'Горячие клавиши');
+  keysTitle.id = 'keys-title';
+  const keysClose = node('button', 'keys-close');
+  keysClose.replaceChildren(icon('close'));
+  keysClose.setAttribute('aria-label', 'Закрыть');
+  keysClose.onclick = () => keysDialog.close();
+  const keysList = node('div', 'keys-list');
+  for (const [keys, label] of shortcuts) {
+    const row = node('div', 'keys-row'),
+      combo = node('span', 'keys-combo');
+    for (const k of keys) combo.append(node('kbd', '', k));
+    combo.append(node('kbd', '', k));
+    row.append(combo, node('span', 'keys-label', label));
+    keysList.append(row);
+  }
+  const keysHead = node('div', 'keys-head');
+  keysHead.append(keysTitle, keysClose);
+  keysDialog.append(keysHead, keysList);
+  document.body.append(keysDialog);
+  const keysButton = node('button', 'quiet keys-open');
+  keysButton.type = 'button';
+  keysButton.replaceChildren(icon('keyboard'));
+  keysButton.title = 'Горячие клавиши (?)';
+  keysButton.setAttribute('aria-label', 'Горячие клавиши');
+  keysButton.onclick = () => keysDialog.showModal();
+  (document.getElementById('feedback-open') || document.querySelector('.window-actions'))?.before(
+    keysButton
+  );
+  addEventListener('keydown', (event) => {
+    if (
+      event.target.matches?.('input,textarea,select,[contenteditable]') ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    )
+      return;
+    if (event.key === '?') {
+      event.preventDefault();
+      keysDialog.open ? keysDialog.close() : keysDialog.showModal();
+      return;
+    }
+    if (document.querySelector('dialog[open]')) return;
+    const volumeInput = document.getElementById('volume');
+    if (event.code === 'KeyM') {
+      event.preventDefault();
+      document.querySelector('.volume-mute')?.click();
+    } else if (
+      (event.code === 'ArrowUp' || event.code === 'ArrowDown') &&
+      (event.target === document.body || event.target === document.documentElement) &&
+      volumeInput &&
+      !event.target.matches?.('button,[role=button]')
+    ) {
+      event.preventDefault();
+      const next = Math.max(
+        0,
+        Math.min(1, Number(volumeInput.value) + (event.code === 'ArrowUp' ? 0.05 : -0.05))
+      );
+      volumeInput.value = next.toFixed(2);
+      volumeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      toast('Громкость ' + Math.round(next * 100) + '%');
+    }
+  });
 
   // ——— Анимации ———
   // Сердечко «пульсирует» при нажатии.
