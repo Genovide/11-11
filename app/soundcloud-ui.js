@@ -606,7 +606,7 @@ svgPaths.sync = 'M20 8a8 8 0 00-14-3L3 8M3 3v5h5M4 16a8 8 0 0014 3l3-3M21 21v-5h
 function trashButton(cls) {
   const button = node('button', 'delete-track ' + cls);
   button.append(icon('trash'));
-  button.title = 'Удалить трек с диска';
+  button.title = 'Переместить трек в Корзину';
   button.setAttribute('aria-label', 'Удалить трек');
   return button;
 }

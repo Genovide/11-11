@@ -72,6 +72,7 @@ module.exports = function setupSoundCloud({
   applyTrackCard = (t) => t,
   fetchImpl = fetch,
   workerImpl,
+  trashItem = (file) => require('electron').shell.trashItem(file),
 }) {
   const dir = path.join(app.getPath('userData'), 'soundcloud'),
     python = require('./runtime-paths.cjs').python,
@@ -423,13 +424,15 @@ module.exports = function setupSoundCloud({
     for (let offset = 0; offset < unknown.length; offset += 4)
       await Promise.allSettled(
         unknown.slice(offset, offset + 4).map(async (t) => {
-          if (!detailCache.has(t.id))
+          if (!detailCache.has(t.id)) {
+            if (detailCache.size >= 500) detailCache.delete(detailCache.keys().next().value);
             detailCache.set(
               t.id,
               worker({ action: 'details', url: t.pageUrl })
                 .then((result) => result.track)
                 .catch(() => t)
             );
+          }
           const detailed = await detailCache.get(t.id);
           register([detailed]);
           Object.assign(t, detailed);
@@ -673,6 +676,9 @@ module.exports = function setupSoundCloud({
     }
     cdnUrl(value.url);
     resolved.set(id, { until: Date.now() + 180000, value });
+    // Ссылки живут 3 минуты: выбрасываем просроченные, чтобы кэш не рос всю сессию.
+    if (resolved.size > 200)
+      for (const [key, entry] of resolved) if (entry.until <= Date.now()) resolved.delete(key);
     return value;
   }
   async function download(id) {
@@ -906,26 +912,27 @@ module.exports = function setupSoundCloud({
     if (isAligning(id)) throw Error('Сначала отмени синхронизацию текста');
     const confirmed = await dialog.showMessageBox(getWindow(), {
       type: 'warning',
-      buttons: ['Отмена', 'Удалить файл'],
+      buttons: ['Отмена', 'Переместить в Корзину'],
       defaultId: 0,
       cancelId: 0,
-      title: 'Удалить трек с диска?',
+      title: 'Удалить трек?',
       message: t.artist + ' — ' + t.title,
-      detail: 'Файл будет удалён безвозвратно:\n' + t.path,
+      detail:
+        'Файл будет перемещён в Корзину, его можно восстановить:\n' +
+        t.path +
+        '\n\nТекст и тайминги сохранятся и вернутся, если восстановить файл и пересканировать медиатеку.',
     });
     if (confirmed.response !== 1) return { cancelled: true };
-    await fs.unlink(t.path).catch((e) => {
-      if (e.code !== 'ENOENT') throw e;
-    });
+    try {
+      await fs.access(t.path);
+      await trashItem(t.path);
+    } catch (e) {
+      if (e.code !== 'ENOENT') throw Error('Не удалось переместить файл в Корзину: ' + e.message);
+    }
     const lib = getLibrary();
     lib.tracks = lib.tracks.filter((x) => x.path !== t.path);
     refreshAllowed();
     await save();
-    for (const name of [
-      path.join(app.getPath('userData'), 'alignment', id + '.json'),
-      path.join(app.getPath('userData'), 'lyrics', id + '.txt'),
-    ])
-      await fs.unlink(name).catch(() => {});
     return { id, deleted: true };
   }
   async function persistFavorites() {

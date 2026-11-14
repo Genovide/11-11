@@ -4,7 +4,10 @@ import globals from 'globals';
 // Сначала только правила, ловящие настоящие ошибки. Стиль — забота Prettier.
 const base = {
   ...js.configs.recommended.rules,
-  'no-unused-vars': ['warn', { vars: 'local', args: 'none', caughtErrors: 'none' }],
+  'no-unused-vars': [
+    'warn',
+    { vars: 'local', args: 'none', caughtErrors: 'none', ignoreRestSiblings: true },
+  ],
   'no-empty': ['warn', { allowEmptyCatch: true }],
   // Модули расширяют поведение, переопределяя функции друг друга (обёртки).
   'no-func-assign': 'off',

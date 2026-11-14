@@ -276,7 +276,7 @@ function load(t) {
       title: t.title,
       artist: t.artist,
       album: t.album,
-      artwork: [],
+      artwork: t.cover ? [{ src: media(t, true), sizes: '512x512' }] : [],
     });
   }
 }
@@ -588,7 +588,27 @@ audio.ontimeupdate = () => {
     ? (audio.currentTime / audio.duration) * 1000
     : 0;
   syncLyrics();
+  updatePositionState();
 };
+// Полоса прокрутки в «Исполняется» (macOS) и в медиаоверлее Windows.
+let positionStateAt = 0;
+function updatePositionState(force = false) {
+  if (!('mediaSession' in navigator) || !navigator.mediaSession.setPositionState) return;
+  const now = performance.now();
+  if (!force && now - positionStateAt < 1000) return;
+  positionStateAt = now;
+  try {
+    if (Number.isFinite(audio.duration) && audio.duration > 0)
+      navigator.mediaSession.setPositionState({
+        duration: audio.duration,
+        position: Math.min(audio.currentTime, audio.duration),
+        playbackRate: audio.playbackRate || 1,
+      });
+    else navigator.mediaSession.setPositionState();
+  } catch {}
+}
+audio.addEventListener('seeked', () => updatePositionState(true));
+audio.addEventListener('durationchange', () => updatePositionState(true));
 audio.onended = () => advance(1, true);
 audio.onplay = () => {
   $('play').textContent = 'Ⅱ';
@@ -640,8 +660,26 @@ if ('mediaSession' in navigator) {
     pause: () => audio.pause(),
     previoustrack: () => advance(-1),
     nexttrack: () => advance(),
+    seekto: (details) => {
+      if (!Number.isFinite(audio.duration) || !Number.isFinite(details.seekTime)) return;
+      const time = Math.max(0, Math.min(audio.duration, details.seekTime));
+      if (details.fastSeek && 'fastSeek' in audio) audio.fastSeek(time);
+      else audio.currentTime = time;
+    },
+    seekforward: (details) => {
+      if (Number.isFinite(audio.duration))
+        audio.currentTime = Math.min(
+          audio.duration,
+          audio.currentTime + (details.seekOffset || 10)
+        );
+    },
+    seekbackward: (details) => {
+      audio.currentTime = Math.max(0, audio.currentTime - (details.seekOffset || 10));
+    },
   }))
-    navigator.mediaSession.setActionHandler(key, handler);
+    try {
+      navigator.mediaSession.setActionHandler(key, handler);
+    } catch {}
 }
 window.runSmokeTest = async () => {
   const checks = { library: library.tracks.length > 0, rows: $('track-list').children.length > 0 };
