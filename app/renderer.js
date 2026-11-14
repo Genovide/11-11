@@ -502,8 +502,6 @@ function draw(ms) {
 requestAnimationFrame(draw);
 function updateEffects() {
   document.body.classList.toggle('effects-off', !effect);
-  $('effects').classList.toggle('active', !!effect);
-  $('effects').querySelector('b').textContent = ['ВЫКЛ', 'ТИХО', 'ВКЛ'][effect];
   localStorage.setItem('effect', effect);
 }
 updateEffects();
@@ -554,10 +552,6 @@ $('shuffle').onclick = () => {
 };
 $('repeat').onclick = () => {
   $('repeat').classList.toggle('active', (repeat = !repeat));
-};
-$('effects').onclick = () => {
-  effect = (effect + 1) % 3;
-  updateEffects();
 };
 $('now-favorite').onclick = () => current && toggleFavorite(current.id);
 $('volume').value = window.initialUiPreferences?.volume ?? localStorage.getItem('volume') ?? '.7';
