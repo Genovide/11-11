@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Upload verified Windows and Mac packages into the v1.2.9 draft
+        description: Upload verified Windows and Mac packages into the v1.2.10 draft
         type: boolean
         default: false
 permissions:
@@ -60,7 +60,7 @@ jobs:
           if ((Get-FileHash base.zip).Hash.ToLowerInvariant() -ne '049857d0ec726d2112bc5156da8ba92ca50eb2dbd593b8e38360ebafb844081f') { throw 'Base checksum mismatch' }
           Add-Type -AssemblyName System.IO.Compression.FileSystem
           [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'base.zip'),(Join-Path $pwd 'work/base'))
-          [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'dist/SoundSync-1.2.9-Update-Windows-x64.zip'),(Join-Path $pwd 'work/patch'))
+          [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'dist/SoundSync-1.2.10-Update-Windows-x64.zip'),(Join-Path $pwd 'work/patch'))
       - name: Repair compatible base without a full download and repeat update
         shell: powershell
         run: |
@@ -82,7 +82,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: verified-Windows-update
-          path: dist/SoundSync-1.2.9-Update-Windows-x64.zip
+          path: dist/SoundSync-1.2.10-Update-Windows-x64.zip
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -108,7 +108,7 @@ jobs:
           echo 'e9af35535b3fef181ae8af9ba3419cdd37eda49b1d8b7877eddb55c308468867  base.zip' | shasum -a 256 -c -
           mkdir -p dist/SoundSync-darwin-arm64
           ditto -x -k base.zip dist/SoundSync-darwin-arm64
-          ditto -x -k dist/SoundSync-1.2.9-Update-macOS-arm64.zip patch
+          ditto -x -k dist/SoundSync-1.2.10-Update-macOS-arm64.zip patch
           bash -n patch/Update-SoundSync.command
       - name: Update compatible Mac and launch the signed app
         run: |
@@ -142,7 +142,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: verified-macOS-update
-          path: dist/SoundSync-1.2.9-Update-macOS-arm64.zip
+          path: dist/SoundSync-1.2.10-Update-macOS-arm64.zip
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -165,6 +165,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 -c 'import pathlib,hashlib;p=pathlib.Path("dist");files=sorted(p.glob("SoundSync-1.2.9-Update-*.zip"));assert len(files)==2;(p/"SHA256SUMS.txt").write_text("".join(hashlib.sha256(f.read_bytes()).hexdigest()+"  "+f.name+"\n" for f in files))'
-          test "$(gh release view v1.2.9 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true
-          gh release upload v1.2.9 dist/SoundSync-1.2.9-Update-Windows-x64.zip dist/SoundSync-1.2.9-Update-macOS-arm64.zip dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          python3 -c 'import pathlib,hashlib;p=pathlib.Path("dist");files=sorted(p.glob("SoundSync-1.2.10-Update-*.zip"));assert len(files)==2;(p/"SHA256SUMS.txt").write_text("".join(hashlib.sha256(f.read_bytes()).hexdigest()+"  "+f.name+"\n" for f in files))'
+          test "$(gh release view v1.2.10 --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true
+          gh release upload v1.2.10 dist/SoundSync-1.2.10-Update-Windows-x64.zip dist/SoundSync-1.2.10-Update-macOS-arm64.zip dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber

@@ -8,12 +8,12 @@
 
 ## Скачать SoundSync
 
-**Первый запуск:** скачай полную сборку **1.2.0**, затем установи один последний апдейт **1.2.9**. Промежуточные обновления не нужны.
+**Первый запуск:** скачай полную сборку **1.2.0**, затем установи один последний апдейт **1.2.10**. Промежуточные обновления не нужны.
 
 | Система | ① Полная сборка — для первой установки | ② Последний накопительный апдейт |
 |---|---|---|
-| **Windows x64** | [Скачать полный ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip) | [Скачать апдейт 1.2.9](https://github.com/Genovide/SoundSync/releases/download/v1.2.9/SoundSync-1.2.9-Update-Windows-x64.zip) |
-| **macOS 14+, Apple Silicon** | [Скачать DMG](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.dmg) · [Полный ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip) | [Скачать апдейт 1.2.9](https://github.com/Genovide/SoundSync/releases/download/v1.2.9/SoundSync-1.2.9-Update-macOS-arm64.zip) |
+| **Windows x64** | [Скачать полный ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip) | [Скачать апдейт 1.2.10](https://github.com/Genovide/SoundSync/releases/download/v1.2.10/SoundSync-1.2.10-Update-Windows-x64.zip) |
+| **macOS 14+, Apple Silicon** | [Скачать DMG](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.dmg) · [Полный ZIP](https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip) | [Скачать апдейт 1.2.10](https://github.com/Genovide/SoundSync/releases/download/v1.2.10/SoundSync-1.2.10-Update-macOS-arm64.zip) |
 
 **Уже установлен SoundSync?** Скачай только апдейт своей системы и установи поверх существующей версии. Он включает все изменения предыдущих обновлений, в том числе поддержку прежнего названия плеера. Музыка, настройки и история сохраняются.
 
@@ -69,7 +69,7 @@
 
 Mac-сборка тестовая: она имеет ad-hoc подпись, но не нотарифицирована Apple. Gatekeeper может ограничивать открытие. Защиту системы отключать не нужно; для обычного публичного распространения без этих ограничений требуется Developer ID и нотариализация.
 
-Update ZIP 1.2.9 обновляет установленную версию, включая прежнюю portable-сборку. Совместимая основа сохраняется; недостающая загружается автоматически. Приложение становится `SoundSync.app`; локальная ad-hoc подпись восстанавливается системным codesign. Закрой приложение через меню SoundSync и запусти `Update-SoundSync.command`. Данные прежней portable-сборки копируются в `Application Support/SoundSync`, если профиля SoundSync ещё нет. Существующий профиль не заменяется. Для устаревшей основы нужен интернет и место для резервной копии.
+Update ZIP 1.2.10 обновляет установленную версию, включая прежнюю portable-сборку. Совместимая основа сохраняется; недостающая загружается автоматически. Приложение становится `SoundSync.app`; локальная ad-hoc подпись восстанавливается системным codesign. Закрой приложение через меню SoundSync и запусти `Update-SoundSync.command`. Данные прежней portable-сборки копируются в `Application Support/SoundSync`, если профиля SoundSync ещё нет. Существующий профиль не заменяется. Для устаревшей основы нужен интернет и место для резервной копии.
 
 ## Примечания
 
