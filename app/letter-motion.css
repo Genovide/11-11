@@ -45,12 +45,6 @@
   transform: none !important;
   text-shadow: none !important;
 }
-@media (prefers-reduced-motion: reduce) {
-  .lyric-glyph {
-    transform: none !important;
-    text-shadow: none !important;
-  }
-}
 .letter-timed .lyric-word.glow,
 .letter-decorative .lyric-cluster.glow {
   filter: drop-shadow(0 0 0.12em rgb(255 255 255 / calc(var(--word-halo, 0) * 0.28)))
