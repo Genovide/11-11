@@ -340,6 +340,11 @@ function drawVisualizer(ms) {
     )
   )
     return;
+  if (visualPreset === 'rays' && (raysScene.error || raysScene.lost) && !raysScene.notified) {
+    // Видеокарта не справилась с WebGL: показываем 2D-волны вместо чёрного экрана.
+    raysScene.notified = true;
+    toast('«Лучи» не поддерживаются этой видеокартой — показываем волны');
+  }
   if (visualPreset === 'mandala') {
     vg.save();
     vg.setTransform(1, 0, 0, 1, 0, 0);

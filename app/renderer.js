@@ -16,7 +16,9 @@ let library = { tracks: [], folder: '' },
   wave,
   activeLine = -1,
   lyricLines = [],
-  effect = Number(localStorage.getItem('effect') ?? 2),
+  // Переключатель «Атмосфера» убран в 1.2.8, поэтому сохранённое «ВЫКЛ» больше нельзя вернуть:
+  // эффекты всегда включены, иначе у таких пользователей навсегда пропадала анимация текста.
+  effect = 2,
   busy = false;
 const favorites = new Set(
   window.initialUiPreferences?.favoriteIds || JSON.parse(localStorage.getItem('favorites') || '[]')

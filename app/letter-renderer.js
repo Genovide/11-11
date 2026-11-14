@@ -90,7 +90,9 @@ function setHalo(group, value) {
   group.element.classList.toggle('glow', Number(value) > 0.001);
 }
 function paintLyricLetters(time) {
-  const motion = effect && !reduced;
+  // Лёгкий подскок букв (≈4% высоты) — суть анимации текста, поэтому он не зависит от системной
+  // настройки «уменьшить движение» (на Windows её часто выключают ради скорости).
+  const motion = !!effect;
   for (const group of lyricGlyphGroups) {
     if (group.uncertain || lyricBox.classList.contains('manual-gap')) {
       group.reset = null;

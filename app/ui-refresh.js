@@ -490,9 +490,10 @@
     const toastBeforeRefresh = toast;
     toast = function (text) {
       toastBeforeRefresh(text);
-      const problem = /не удалось|ошибк|недоступ|не найден|нельзя|сначала|failed|error/i.test(
-          String(text)
-        ),
+      const problem =
+          /не удалось|ошибк|недоступ|не поддерж|не найден|нельзя|сначала|failed|error/i.test(
+            String(text)
+          ),
         message = node('span', 'toast-text', String(text));
       toastBox.replaceChildren(icon(problem ? 'alert' : 'check'), message);
       toastBox.classList.toggle('toast-problem', problem);
