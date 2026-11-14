@@ -1,4 +1,4 @@
-const VERSION = '1.2.5',
+const VERSION = '1.2.7',
   REPO = 'Genovide/SoundSync';
 function newer(a, b) {
   const parse = (v) => String(v).replace(/^v/, '').split('.').map(Number);

@@ -378,6 +378,13 @@
     leave();
     oldOpenArtist(name);
   };
+  window.addEventListener('track-card-changed', (event) => {
+    const updated = event.detail;
+    if (!updated?.id) return;
+    for (const track of randomRemote) if (track.id === updated.id) Object.assign(track, updated);
+    const previous = historyRemote.get(updated.id);
+    if (previous) Object.assign(previous, updated);
+  });
   render();
   if (randomTab === 'soundcloud') refreshRemoteRandom();
 })();

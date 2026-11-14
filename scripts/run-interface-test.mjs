@@ -125,6 +125,22 @@ try {
   )
     throw Error('Renderer startup diagnostics contain errors');
 } finally {
-  child.kill();
+  // A macOS window may hide instead of exiting on SIGTERM. Keep fixture cleanup
+  // bounded so a successful test cannot leave the CI job running indefinitely.
+  if (child.exitCode === null && child.signalCode === null) {
+    const closed = new Promise((resolve) => child.once('close', resolve));
+    child.kill('SIGTERM');
+    const force = setTimeout(() => child.kill('SIGKILL'), 1500);
+    let timeout;
+    await Promise.race([
+      closed,
+      new Promise((resolve) => {
+        timeout = setTimeout(resolve, 5000);
+      }),
+    ]);
+    clearTimeout(force);
+    clearTimeout(timeout);
+    child.unref();
+  }
   fs.closeSync(log);
 }
