@@ -6,6 +6,67 @@ const lyricBox = $('lyrics');
 let lyricsVocalRanges = null;
 let manualLyricMode = false;
 const lyricGap = node('span', 'lyric-gap hidden');
+// Звук идёт через Web Audio (визуализатор), а audio.currentTime не учитывает задержку
+// вывода: с Bluetooth-наушниками текст убегал вперёд на 0,1–0,3 с. Вычитаем задержку
+// устройства и ручной сдвиг, который пользователь подбирает клавишами Alt+[ и Alt+].
+let lyricsOffset = Number(window.initialUiPreferences?.lyricsOffsetMs || 0) / 1000;
+function outputDelay() {
+  if (typeof ctx === 'undefined' || !ctx || ctx.state !== 'running') return 0;
+  const delay = (ctx.baseLatency || 0) + (ctx.outputLatency || 0);
+  return Number.isFinite(delay) ? Math.min(0.6, Math.max(0, delay)) : 0;
+}
+// audio.currentTime обновляется неровно: между кадрами по 16,7 мс он сдвигается то на 0,
+// то на 60 мс, и заливка слов дёргается. Ведём собственные часы по performance.now()
+// и мягко подтягиваем их к позиции звука; при перемотке или паузе сразу встаём на неё.
+let clockValue = 0,
+  clockWall = 0;
+function smoothMediaTime() {
+  const raw = audio.currentTime,
+    now = performance.now();
+  if (now === clockWall) return clockValue;
+  if (audio.paused || audio.seeking || audio.readyState < 3 || !clockWall) {
+    clockValue = raw;
+    clockWall = now;
+    return raw;
+  }
+  const predicted = clockValue + ((now - clockWall) / 1000) * (audio.playbackRate || 1),
+    error = raw - predicted;
+  clockValue = Math.abs(error) > 0.25 ? raw : Math.max(clockValue, predicted + error * 0.08);
+  clockWall = now;
+  return clockValue;
+}
+function lyricTime() {
+  return Math.max(0, smoothMediaTime() - outputDelay() + lyricsOffset);
+}
+function setLyricsOffset(seconds) {
+  lyricsOffset = Math.round(Math.max(-2, Math.min(2, seconds)) * 20) / 20;
+  window.lumen.preferencesSet({ lyricsOffsetMs: Math.round(lyricsOffset * 1000) }).catch(() => {});
+  const ms = Math.round(lyricsOffset * 1000);
+  toast(
+    ms === 0
+      ? 'Сдвиг текста сброшен'
+      : `Текст ${ms > 0 ? 'раньше' : 'позже'} на ${Math.abs(ms)} мс · Alt+\\ — сбросить`
+  );
+  activeLine = -1;
+  repaintLyrics();
+}
+window.addEventListener('keydown', (e) => {
+  if (!e.altKey || e.ctrlKey || e.metaKey || e.target.closest?.('input,textarea,[contenteditable]'))
+    return;
+  const step = e.shiftKey ? 0.25 : 0.05;
+  if (e.code === 'BracketLeft') setLyricsOffset(lyricsOffset - step);
+  else if (e.code === 'BracketRight') setLyricsOffset(lyricsOffset + step);
+  else if (e.code === 'Backslash') setLyricsOffset(0);
+  else return;
+  e.preventDefault();
+});
+let lyricStarts = [],
+  lastLyricPaint = -1;
+function repaintLyrics() {
+  lastLyricPaint = -1;
+  syncLyrics();
+  paintLyricWords(lyricTime());
+}
 document.querySelector('.panel-tabs').append(lyricGap);
 function seekToLyric(line) {
   const target = lyricStart(line);
@@ -71,6 +132,8 @@ setLyrics = function (t) {
     : parseLumenLyrics(t.lyrics || '');
   if (manualLyricMode)
     lyricLines = lyricLines.map((l) => (l.end <= l.time ? { ...l, time: null } : l));
+  lyricStarts = lyricLines.map(lyricStart);
+  lastLyricPaint = -1;
   const synced = lyricLines.some((l) => l.time !== null);
   lyricBox.classList.toggle('synced', synced);
   if (!synced) {
@@ -116,12 +179,13 @@ setLyrics = function (t) {
 };
 syncLyrics = function () {
   if (!lyricBox.classList.contains('synced')) return;
+  const time = lyricTime();
   let idx = -1;
-  for (let i = 0; i < lyricLines.length; i++) {
-    const start = lyricStart(lyricLines[i]);
-    if (start !== null && audio.currentTime >= start) idx = i;
+  for (let i = 0; i < lyricStarts.length; i++) {
+    const start = lyricStarts[i];
+    if (start !== null && time >= start) idx = i;
   }
-  if (manualLyricMode) idx = lyricPlaybackState(lyricLines, audio.currentTime).index;
+  if (manualLyricMode) idx = lyricPlaybackState(lyricLines, time).index;
   lyricGap.classList.add('hidden');
   lyricBox.classList.toggle('no-vocals', manualLyricMode && idx < 0);
   lyricBox.classList.toggle('manual-gap', manualLyricMode && idx < 0);
@@ -159,29 +223,37 @@ function paintLyricWords(time) {
         0,
         Math.min(1, (time - word.time) / Math.max(0.06, end - word.time))
       );
-      children[j].style.setProperty('--fill', (progress * 100).toFixed(2) + '%');
-      children[j].style.setProperty(
-        '--word-lift',
-        (Math.sin(Math.PI * progress) * 2.6).toFixed(2) + 'px'
-      );
-      children[j].style.setProperty(
-        '--word-scale',
-        (1 + Math.sin(Math.PI * progress) * 0.018).toFixed(4)
-      );
-      children[j].classList.toggle('singing', progress > 0 && progress < 1);
-      children[j].classList.toggle('sung', progress >= 1);
+      // Пишем стили только при изменении: иначе каждый кадр пересчитывал бы стили всех слов.
+      const fill = (progress * 100).toFixed(2) + '%',
+        span = children[j];
+      if (span.lyricFill === fill) continue;
+      span.lyricFill = fill;
+      span.style.setProperty('--fill', fill);
+      span.style.setProperty('--word-lift', (Math.sin(Math.PI * progress) * 2.6).toFixed(2) + 'px');
+      span.style.setProperty('--word-scale', (1 + Math.sin(Math.PI * progress) * 0.018).toFixed(4));
+      span.classList.toggle('singing', progress > 0 && progress < 1);
+      span.classList.toggle('sung', progress >= 1);
     }
   }
 }
 function animateLyrics(now) {
   requestAnimationFrame(animateLyrics);
-  if (document.hidden || now - lastLyricFrame < 16 || !lyricBox.classList.contains('synced'))
-    return;
+  // Рисуем в каждом кадре дисплея: прежний порог 16 мс на 120/144 Гц давал неровный шаг.
+  if (document.hidden || now - lastLyricFrame < 4 || !lyricBox.classList.contains('synced')) return;
   const dt = Math.min(50, now - lastLyricFrame || 16);
   lastLyricFrame = now;
   if (!lyricBox.classList.contains('hidden') && lyricBox.clientHeight) {
+    const time = lyricTime(),
+      scrolling =
+        lyricScrollTarget !== null &&
+        now > lyricScrollPauseUntil &&
+        (Math.abs(lyricScrollTarget - lyricBox.scrollTop) >= 0.5 ||
+          Math.abs(lyricScrollVelocity) >= 2);
+    // На паузе кадры не нужны, пока ничего не меняется.
+    if (time === lastLyricPaint && !scrolling) return;
+    lastLyricPaint = time;
     syncLyrics();
-    paintLyricWords(audio.currentTime);
+    paintLyricWords(time);
     if (lyricScrollTarget !== null && now > lyricScrollPauseUntil) {
       const noMotion = !effect || reduced;
       const delta = lyricScrollTarget - lyricBox.scrollTop;
@@ -212,11 +284,13 @@ audio.addEventListener('seeked', () => {
       const line = lyricBox.children[i];
       for (const span of line?.querySelectorAll('.lyric-word') || []) {
         span.style.setProperty('--fill', i < activeLine ? '100%' : '0%');
+        span.lyricFill = undefined;
         span.classList.remove('singing');
         span.classList.toggle('sung', i < activeLine);
       }
     }
-  paintLyricWords(audio.currentTime);
+  lastLyricPaint = -1;
+  paintLyricWords(lyricTime());
 });
 window.runLyricAnimationTest = () => {
   const before = audio.currentTime;
