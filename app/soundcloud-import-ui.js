@@ -1,18 +1,147 @@
-(()=>{
- const launch=node('button','outline sc-import-launch','Импорт из SoundCloud');launch.type='button';launch.id='sc-import-launch';document.querySelector('.collection .section-head,.collection .collection-head,.collection')?.prepend(launch);
- const modal=node('dialog','feedback-dialog sc-import-dialog');modal.id='sc-import-dialog';modal.innerHTML='<form id="sc-import-form"><div class="feedback-heading"><div><span class="feedback-eyebrow">ПЕРЕНЕСИ ЛЮБИМУЮ МУЗЫКУ</span><h2>Импорт из SoundCloud</h2></div><button type="button" id="sc-import-close" class="feedback-close" aria-label="Закрыть">×</button></div><p class="feedback-intro">Добавим отдельно лайкнутые песни в любимое SoundSync. Существующие треки сохранятся, дубли пропустим. Аудиофайлы не скачиваются.</p><label for="sc-import-url">Ссылка на профиль или его лайки</label><input id="sc-import-url" type="url" required placeholder="https://soundcloud.com/имя-профиля" autocomplete="off"><p class="feedback-privacy">Подходит публичная ссылка на профиль или /имя-профиля/likes. Ссылка /you/likes не содержит имя пользователя. Пароль и вход в SoundCloud не нужны.</p><p id="sc-import-status" role="status"></p><p id="sc-import-error" class="feedback-error" role="alert" hidden></p><section id="sc-import-preview" hidden></section><div class="feedback-actions"><button type="button" id="sc-import-cancel" class="outline" hidden>Отменить загрузку</button><button id="sc-import-load" class="outline" type="submit">Загрузить список</button><button id="sc-import-add" class="primary" type="button" hidden>Добавить в любимое</button></div></form>';
- document.body.append(modal);const q=id=>modal.querySelector('#'+id);let preview=null,loading=false,generation=0;
- function showError(e){q('sc-import-error').textContent=cleanError(e);q('sc-import-error').hidden=false}
- function refreshButton(){launch.hidden=view!=='favorites'||document.body.classList.contains('dashboard-home')}
- const beforeRender=render;render=function(){beforeRender();refreshButton()};refreshButton();
- launch.onclick=()=>{modal.showModal();q('sc-import-url').focus()};
- function cancel(){generation++;if(loading)window.lumen.scImportCancel().catch(()=>{});loading=false;q('sc-import-load').disabled=false;q('sc-import-cancel').hidden=true}
- q('sc-import-close').onclick=()=>{cancel();modal.close()};modal.addEventListener('cancel',cancel);q('sc-import-cancel').onclick=()=>{cancel();q('sc-import-status').textContent='Загрузка отменена. Любимое не изменено.'};
- window.lumen.onScImportProgress(p=>{if(loading)q('sc-import-status').textContent=`${p.profile.name}: просмотрено ${p.scanned}, доступных треков ${p.tracks}…`});
- q('sc-import-url').addEventListener('input',()=>{cancel();preview=null;q('sc-import-add').hidden=true;q('sc-import-preview').hidden=true});
- q('sc-import-form').onsubmit=async e=>{e.preventDefault();cancel();const token=++generation;loading=true;preview=null;q('sc-import-error').hidden=true;q('sc-import-preview').hidden=true;q('sc-import-add').hidden=true;q('sc-import-load').disabled=true;q('sc-import-cancel').hidden=false;q('sc-import-status').textContent='Загружаем публичные лайки…';
-  try{const result=await window.lumen.scImportPreview(q('sc-import-url').value);if(token!==generation)return;preview=result;const box=q('sc-import-preview');box.replaceChildren(node('h3','',result.profile.name),node('p','',`Доступных треков: ${result.found}. Уже в любимом: ${result.already}. Можно добавить: ${result.toAdd}.`));if(result.stats.unavailable||result.stats.playlists||result.excluded)box.append(node('p','feedback-privacy',`Пропущено: недоступных записей — ${result.stats.unavailable}, плейлистов — ${result.stats.playlists}, отмеченных «Не нравится» — ${result.excluded}.`));if(result.profile.likes>result.stats.scanned)box.append(node('p','feedback-privacy',`Счётчик профиля: ${result.profile.likes}; SoundCloud вернул ${result.stats.scanned} публичных элементов. Часть лайков сервис не предоставил.`));const list=node('ul','sc-import-sample');for(const t of result.sample)list.append(node('li','',t.title+' — '+t.artist));box.append(list);box.hidden=false;q('sc-import-status').textContent='Проверь профиль перед добавлением.';q('sc-import-add').textContent=`Добавить ${result.toAdd} в любимое`;q('sc-import-add').hidden=!result.toAdd;
-  }catch(error){if(token===generation){showError(error);q('sc-import-status').textContent='Любимое не изменено.'}}finally{if(token===generation){loading=false;q('sc-import-load').disabled=false;q('sc-import-cancel').hidden=true}}
- };
- q('sc-import-add').onclick=async()=>{if(!preview)return;const b=q('sc-import-add');b.disabled=true;try{const result=await window.lumen.scImportCommit(preview.token);for(const t of result.tracks){remoteFavoriteTracks.set(t.id,t);favorites.add(t.id)}cacheRemoteFavorites();persistFavoriteIds();render();updateFavorite();preview=null;b.hidden=true;q('sc-import-status').textContent=`Готово: добавлено ${result.added}, уже было ${result.already}.`;toast('Добавлено в любимое: '+result.added)}catch(e){showError(e)}finally{b.disabled=false}};
+(() => {
+  const launch = node('button', 'outline sc-import-launch', 'Импорт из SoundCloud');
+  launch.type = 'button';
+  launch.id = 'sc-import-launch';
+  document
+    .querySelector('.collection .section-head,.collection .collection-head,.collection')
+    ?.prepend(launch);
+  const modal = node('dialog', 'feedback-dialog sc-import-dialog');
+  modal.id = 'sc-import-dialog';
+  modal.innerHTML =
+    '<form id="sc-import-form"><div class="feedback-heading"><div><span class="feedback-eyebrow">ПЕРЕНЕСИ ЛЮБИМУЮ МУЗЫКУ</span><h2>Импорт из SoundCloud</h2></div><button type="button" id="sc-import-close" class="feedback-close" aria-label="Закрыть">×</button></div><p class="feedback-intro">Добавим отдельно лайкнутые песни в любимое SoundSync. Существующие треки сохранятся, дубли пропустим. Аудиофайлы не скачиваются.</p><label for="sc-import-url">Ссылка на профиль или его лайки</label><input id="sc-import-url" type="url" required placeholder="https://soundcloud.com/имя-профиля" autocomplete="off"><p class="feedback-privacy">Подходит публичная ссылка на профиль или /имя-профиля/likes. Ссылка /you/likes не содержит имя пользователя. Пароль и вход в SoundCloud не нужны.</p><p id="sc-import-status" role="status"></p><p id="sc-import-error" class="feedback-error" role="alert" hidden></p><section id="sc-import-preview" hidden></section><div class="feedback-actions"><button type="button" id="sc-import-cancel" class="outline" hidden>Отменить загрузку</button><button id="sc-import-load" class="outline" type="submit">Загрузить список</button><button id="sc-import-add" class="primary" type="button" hidden>Добавить в любимое</button></div></form>';
+  document.body.append(modal);
+  const q = (id) => modal.querySelector('#' + id);
+  let preview = null,
+    loading = false,
+    generation = 0;
+  function showError(e) {
+    q('sc-import-error').textContent = cleanError(e);
+    q('sc-import-error').hidden = false;
+  }
+  function refreshButton() {
+    launch.hidden = view !== 'favorites' || document.body.classList.contains('dashboard-home');
+  }
+  const beforeRender = render;
+  render = function () {
+    beforeRender();
+    refreshButton();
+  };
+  refreshButton();
+  launch.onclick = () => {
+    modal.showModal();
+    q('sc-import-url').focus();
+  };
+  function cancel() {
+    generation++;
+    if (loading) window.lumen.scImportCancel().catch(() => {});
+    loading = false;
+    q('sc-import-load').disabled = false;
+    q('sc-import-cancel').hidden = true;
+  }
+  q('sc-import-close').onclick = () => {
+    cancel();
+    modal.close();
+  };
+  modal.addEventListener('cancel', cancel);
+  q('sc-import-cancel').onclick = () => {
+    cancel();
+    q('sc-import-status').textContent = 'Загрузка отменена. Любимое не изменено.';
+  };
+  window.lumen.onScImportProgress((p) => {
+    if (loading)
+      q('sc-import-status').textContent =
+        `${p.profile.name}: просмотрено ${p.scanned}, доступных треков ${p.tracks}…`;
+  });
+  q('sc-import-url').addEventListener('input', () => {
+    cancel();
+    preview = null;
+    q('sc-import-add').hidden = true;
+    q('sc-import-preview').hidden = true;
+  });
+  q('sc-import-form').onsubmit = async (e) => {
+    e.preventDefault();
+    cancel();
+    const token = ++generation;
+    loading = true;
+    preview = null;
+    q('sc-import-error').hidden = true;
+    q('sc-import-preview').hidden = true;
+    q('sc-import-add').hidden = true;
+    q('sc-import-load').disabled = true;
+    q('sc-import-cancel').hidden = false;
+    q('sc-import-status').textContent = 'Загружаем публичные лайки…';
+    try {
+      const result = await window.lumen.scImportPreview(q('sc-import-url').value);
+      if (token !== generation) return;
+      preview = result;
+      const box = q('sc-import-preview');
+      box.replaceChildren(
+        node('h3', '', result.profile.name),
+        node(
+          'p',
+          '',
+          `Доступных треков: ${result.found}. Уже в любимом: ${result.already}. Можно добавить: ${result.toAdd}.`
+        )
+      );
+      if (result.stats.unavailable || result.stats.playlists || result.excluded)
+        box.append(
+          node(
+            'p',
+            'feedback-privacy',
+            `Пропущено: недоступных записей — ${result.stats.unavailable}, плейлистов — ${result.stats.playlists}, отмеченных «Не нравится» — ${result.excluded}.`
+          )
+        );
+      if (result.profile.likes > result.stats.scanned)
+        box.append(
+          node(
+            'p',
+            'feedback-privacy',
+            `Счётчик профиля: ${result.profile.likes}; SoundCloud вернул ${result.stats.scanned} публичных элементов. Часть лайков сервис не предоставил.`
+          )
+        );
+      const list = node('ul', 'sc-import-sample');
+      for (const t of result.sample) list.append(node('li', '', t.title + ' — ' + t.artist));
+      box.append(list);
+      box.hidden = false;
+      q('sc-import-status').textContent = 'Проверь профиль перед добавлением.';
+      q('sc-import-add').textContent = `Добавить ${result.toAdd} в любимое`;
+      q('sc-import-add').hidden = !result.toAdd;
+    } catch (error) {
+      if (token === generation) {
+        showError(error);
+        q('sc-import-status').textContent = 'Любимое не изменено.';
+      }
+    } finally {
+      if (token === generation) {
+        loading = false;
+        q('sc-import-load').disabled = false;
+        q('sc-import-cancel').hidden = true;
+      }
+    }
+  };
+  q('sc-import-add').onclick = async () => {
+    if (!preview) return;
+    const b = q('sc-import-add');
+    b.disabled = true;
+    try {
+      const result = await window.lumen.scImportCommit(preview.token);
+      for (const t of result.tracks) {
+        remoteFavoriteTracks.set(t.id, t);
+        favorites.add(t.id);
+      }
+      cacheRemoteFavorites();
+      persistFavoriteIds();
+      render();
+      updateFavorite();
+      preview = null;
+      b.hidden = true;
+      q('sc-import-status').textContent =
+        `Готово: добавлено ${result.added}, уже было ${result.already}.`;
+      toast('Добавлено в любимое: ' + result.added);
+    } catch (e) {
+      showError(e);
+    } finally {
+      b.disabled = false;
+    }
+  };
 })();

@@ -1,1 +1,27 @@
-const updatesButton=node('button','quiet','Проверить обновления');updatesButton.style.marginTop='12px';document.querySelector('.sidebar-bottom').append(updatesButton);updatesButton.onclick=async()=>{updatesButton.disabled=true;updatesButton.textContent='Проверяем…';try{const result=await window.lumen.updatesCheck();if(result.available){updatesButton.textContent='Скачать '+result.latest;updatesButton.onclick=()=>window.lumen.updatesOpen();toast('Доступна новая версия '+result.latest)}else{updatesButton.textContent='Проверить обновления';toast(result.unpublished?'Релиз ещё не опубликован':'Установлена актуальная версия '+result.version)}}catch{updatesButton.textContent='Проверить обновления';toast('Не удалось проверить обновления. Проверь подключение к интернету.')}finally{updatesButton.disabled=false}};
+const updatesButton = node('button', 'quiet', 'Проверить обновления');
+updatesButton.style.marginTop = '12px';
+document.querySelector('.sidebar-bottom').append(updatesButton);
+updatesButton.onclick = async () => {
+  updatesButton.disabled = true;
+  updatesButton.textContent = 'Проверяем…';
+  try {
+    const result = await window.lumen.updatesCheck();
+    if (result.available) {
+      updatesButton.textContent = 'Скачать ' + result.latest;
+      updatesButton.onclick = () => window.lumen.updatesOpen();
+      toast('Доступна новая версия ' + result.latest);
+    } else {
+      updatesButton.textContent = 'Проверить обновления';
+      toast(
+        result.unpublished
+          ? 'Релиз ещё не опубликован'
+          : 'Установлена актуальная версия ' + result.version
+      );
+    }
+  } catch {
+    updatesButton.textContent = 'Проверить обновления';
+    toast('Не удалось проверить обновления. Проверь подключение к интернету.');
+  } finally {
+    updatesButton.disabled = false;
+  }
+};

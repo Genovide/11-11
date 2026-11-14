@@ -1,16 +1,53 @@
-import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {spawn,execFileSync} from 'node:child_process';
-if(process.platform!=='darwin'||process.arch!=='arm64')throw Error('Native macOS Apple Silicon test required');
-const bundle=path.resolve('dist/SoundSync-darwin-arm64/SoundSync.app'),exe=path.join(bundle,'Contents/MacOS/SoundSync');
-const profile=fs.mkdtempSync(path.join(os.tmpdir(),'soundsync-smoke-'));fs.mkdirSync('dist/diagnostics',{recursive:true});
-const output=fs.openSync('dist/diagnostics/process.log','w');
-const child=spawn(exe,[],{env:{...process.env,PYTHONDONTWRITEBYTECODE:'1',SOUNDSYNC_SMOKE_DIR:profile},stdio:['ignore',output,output]});
-const timer=setTimeout(()=>child.kill('SIGKILL'),90000);
-const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('close',resolve)});clearTimeout(timer);fs.closeSync(output);
-for(const name of ['smoke-report.json','startup.png','startup.log'])if(fs.existsSync(path.join(profile,name)))fs.copyFileSync(path.join(profile,name),'dist/diagnostics/'+name);
-if(code!==0)throw Error('SoundSync exited with '+code+'; see diagnostics/process.log');
-const report=JSON.parse(fs.readFileSync(path.join(profile,'smoke-report.json'),'utf8'));
-if(report.platform!=='darwin'||report.arch!=='arm64'||report.state.title!=='SoundSync'||!report.state.metadata||!report.state.reviews||!report.state.sorting||report.state.bridge!=='object'||!['artists','soundcloud','downloads'].every(view=>report.state.navs.includes(view))||report.state.controls!=='none'||report.rendererErrors.length)throw Error('Native app startup validation failed: '+JSON.stringify(report));
-const python=path.join(bundle,'Contents/Resources/alignment/runtime/bin/python3.12');
-execFileSync(python,['-c',"import stable_whisper,torch,imageio_ffmpeg,mutagen,yt_dlp,curl_cffi;print('Packaged relocated Python imports passed')"],{env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:'inherit'});
-execFileSync('codesign',['--verify','--deep','--strict',bundle],{stdio:'inherit'});
-console.log('PASS: signed bundle launched, renderer and preload loaded, relocated Python imported, screenshot saved');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn, execFileSync } from 'node:child_process';
+if (process.platform !== 'darwin' || process.arch !== 'arm64')
+  throw Error('Native macOS Apple Silicon test required');
+const bundle = path.resolve('dist/SoundSync-darwin-arm64/SoundSync.app'),
+  exe = path.join(bundle, 'Contents/MacOS/SoundSync');
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'soundsync-smoke-'));
+fs.mkdirSync('dist/diagnostics', { recursive: true });
+const output = fs.openSync('dist/diagnostics/process.log', 'w');
+const child = spawn(exe, [], {
+  env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1', SOUNDSYNC_SMOKE_DIR: profile },
+  stdio: ['ignore', output, output],
+});
+const timer = setTimeout(() => child.kill('SIGKILL'), 90000);
+const code = await new Promise((resolve, reject) => {
+  child.on('error', reject);
+  child.on('close', resolve);
+});
+clearTimeout(timer);
+fs.closeSync(output);
+for (const name of ['smoke-report.json', 'startup.png', 'startup.log'])
+  if (fs.existsSync(path.join(profile, name)))
+    fs.copyFileSync(path.join(profile, name), 'dist/diagnostics/' + name);
+if (code !== 0) throw Error('SoundSync exited with ' + code + '; see diagnostics/process.log');
+const report = JSON.parse(fs.readFileSync(path.join(profile, 'smoke-report.json'), 'utf8'));
+if (
+  report.platform !== 'darwin' ||
+  report.arch !== 'arm64' ||
+  report.state.title !== 'SoundSync' ||
+  !report.state.metadata ||
+  !report.state.reviews ||
+  !report.state.sorting ||
+  report.state.bridge !== 'object' ||
+  !['artists', 'soundcloud', 'downloads'].every((view) => report.state.navs.includes(view)) ||
+  report.state.controls !== 'none' ||
+  report.rendererErrors.length
+)
+  throw Error('Native app startup validation failed: ' + JSON.stringify(report));
+const python = path.join(bundle, 'Contents/Resources/alignment/runtime/bin/python3.12');
+execFileSync(
+  python,
+  [
+    '-c',
+    "import stable_whisper,torch,imageio_ffmpeg,mutagen,yt_dlp,curl_cffi;print('Packaged relocated Python imports passed')",
+  ],
+  { env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1' }, stdio: 'inherit' }
+);
+execFileSync('codesign', ['--verify', '--deep', '--strict', bundle], { stdio: 'inherit' });
+console.log(
+  'PASS: signed bundle launched, renderer and preload loaded, relocated Python imported, screenshot saved'
+);

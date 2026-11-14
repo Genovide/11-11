@@ -1,17 +1,131 @@
-export function soundcloudUrl(value){
- const found=String(value||'').trim().match(/https?:\/\/[^\s<>]+/i);if(!found)throw Error('Вставь ссылку на SoundCloud');
- const u=new URL(found[0].replace(/[),.!]+$/,''));
- if(u.protocol!=='https:'||u.username||u.password||u.port||!['soundcloud.com','www.soundcloud.com','m.soundcloud.com','on.soundcloud.com'].includes(u.hostname))throw Error('Нужна HTTPS-ссылка на SoundCloud');
- const parts=u.pathname.split('/').filter(Boolean);if(u.hostname!=='on.soundcloud.com'&&parts.length<2)throw Error('Нужна ссылка на трек или плейлист, а не на профиль');
- const secret=u.searchParams.get('secret_token');u.search='';u.hash='';if(secret)u.searchParams.set('secret_token',secret);if(u.hostname!=='on.soundcloud.com')u.hostname='soundcloud.com';u.pathname=u.pathname.replace(/\/$/,'');return u.href;
+export function soundcloudUrl(value) {
+  const found = String(value || '')
+    .trim()
+    .match(/https?:\/\/[^\s<>]+/i);
+  if (!found) throw Error('Вставь ссылку на SoundCloud');
+  const u = new URL(found[0].replace(/[),.!]+$/, ''));
+  if (
+    u.protocol !== 'https:' ||
+    u.username ||
+    u.password ||
+    u.port ||
+    !['soundcloud.com', 'www.soundcloud.com', 'm.soundcloud.com', 'on.soundcloud.com'].includes(
+      u.hostname
+    )
+  )
+    throw Error('Нужна HTTPS-ссылка на SoundCloud');
+  const parts = u.pathname.split('/').filter(Boolean);
+  if (u.hostname !== 'on.soundcloud.com' && parts.length < 2)
+    throw Error('Нужна ссылка на трек или плейлист, а не на профиль');
+  const secret = u.searchParams.get('secret_token');
+  u.search = '';
+  u.hash = '';
+  if (secret) u.searchParams.set('secret_token', secret);
+  if (u.hostname !== 'on.soundcloud.com') u.hostname = 'soundcloud.com';
+  u.pathname = u.pathname.replace(/\/$/, '');
+  return u.href;
 }
-export function coverUrl(value){try{const u=new URL(value);return u.protocol==='https:'&&(u.hostname==='sndcdn.com'||u.hostname.endsWith('.sndcdn.com'))?u.href.replace(/-(?:large|small|badge|tiny|t(?:20|50|67|100|120|200|240|250|300)x(?:20|50|67|100|120|200|240|250|300))(\.[a-z]+)(?=\?|$)/i,'-t500x500$1'):''}catch{return''}}
-export function cleanTrack(value){
- const url=soundcloudUrl(value.url||value.pageUrl);return{url,id:String(value.id||value.scId||url),title:String(value.title||'Трек SoundCloud').slice(0,300),artist:String(value.artist||'SoundCloud').slice(0,200),cover:coverUrl(value.cover),liked:!!value.liked,addedAt:Number(value.addedAt)||Date.now(),lastPlayed:Number(value.lastPlayed)||0,playCount:Math.max(0,Math.floor(Number(value.playCount)||0))};
+export function coverUrl(value) {
+  try {
+    const u = new URL(value);
+    return u.protocol === 'https:' &&
+      (u.hostname === 'sndcdn.com' || u.hostname.endsWith('.sndcdn.com'))
+      ? u.href.replace(
+          /-(?:large|small|badge|tiny|t(?:20|50|67|100|120|200|240|250|300)x(?:20|50|67|100|120|200|240|250|300))(\.[a-z]+)(?=\?|$)/i,
+          '-t500x500$1'
+        )
+      : '';
+  } catch {
+    return '';
+  }
 }
-export function mergeTrack(tracks,input){const track=cleanTrack(input),old=tracks.find(t=>t.url===track.url);if(old){Object.assign(old,{...track,liked:old.liked||track.liked,addedAt:Math.min(old.addedAt,track.addedAt),lastPlayed:Math.max(old.lastPlayed,track.lastPlayed),playCount:Math.max(old.playCount||0,track.playCount||0)});return old}tracks.push(track);return track}
-export function readState(text){try{const raw=JSON.parse(text),tracks=[];for(const t of Array.isArray(raw.tracks)?raw.tracks:[])try{mergeTrack(tracks,t)}catch{};let currentUrl='';try{currentUrl=raw.currentUrl?soundcloudUrl(raw.currentUrl):''}catch{}return{version:1,tracks,currentUrl,playlists:cleanPlaylists(raw.playlists,tracks)}}catch{return{version:1,tracks:[],currentUrl:'',playlists:[]}}}
+export function cleanTrack(value) {
+  const url = soundcloudUrl(value.url || value.pageUrl);
+  return {
+    url,
+    id: String(value.id || value.scId || url),
+    title: String(value.title || 'Трек SoundCloud').slice(0, 300),
+    artist: String(value.artist || 'SoundCloud').slice(0, 200),
+    cover: coverUrl(value.cover),
+    liked: !!value.liked,
+    addedAt: Number(value.addedAt) || Date.now(),
+    lastPlayed: Number(value.lastPlayed) || 0,
+    playCount: Math.max(0, Math.floor(Number(value.playCount) || 0)),
+  };
+}
+export function mergeTrack(tracks, input) {
+  const track = cleanTrack(input),
+    old = tracks.find((t) => t.url === track.url);
+  if (old) {
+    Object.assign(old, {
+      ...track,
+      liked: old.liked || track.liked,
+      addedAt: Math.min(old.addedAt, track.addedAt),
+      lastPlayed: Math.max(old.lastPlayed, track.lastPlayed),
+      playCount: Math.max(old.playCount || 0, track.playCount || 0),
+    });
+    return old;
+  }
+  tracks.push(track);
+  return track;
+}
+export function readState(text) {
+  try {
+    const raw = JSON.parse(text),
+      tracks = [];
+    for (const t of Array.isArray(raw.tracks) ? raw.tracks : [])
+      try {
+        mergeTrack(tracks, t);
+      } catch {}
+    let currentUrl = '';
+    try {
+      currentUrl = raw.currentUrl ? soundcloudUrl(raw.currentUrl) : '';
+    } catch {}
+    return { version: 1, tracks, currentUrl, playlists: cleanPlaylists(raw.playlists, tracks) };
+  } catch {
+    return { version: 1, tracks: [], currentUrl: '', playlists: [] };
+  }
+}
 
-export function cleanPlaylists(value,tracks){const result=[],ids=new Set();for(const p of Array.isArray(value)?value.slice(0,200):[]){if(!p||typeof p.name!=='string'||!p.name.trim())continue;const id=String(p.id||'').slice(0,100);if(!id||id.startsWith('curated:')||id.startsWith('builtin:')||ids.has(id))continue;ids.add(id);const urls=[];for(const v of Array.isArray(p.urls)?p.urls.slice(0,10000):[]){try{const u=soundcloudUrl(v);if(!urls.includes(u)&&tracks.some(t=>t.url===u))urls.push(u)}catch{}}result.push({id,name:p.name.trim().slice(0,100),urls})}return result}
-export function importBackup(state,raw){if(!raw||typeof raw!=='object'||!Array.isArray(raw.tracks)||raw.tracks.length>20000)throw Error('Это не файл переноса SoundSync.');const incoming=readState(JSON.stringify(raw));if(raw.tracks.length&&!incoming.tracks.length)throw Error('В файле нет подходящих треков SoundCloud.');const next=readState(JSON.stringify(state));for(const t of incoming.tracks)mergeTrack(next.tracks,{...t,liked:raw.type==='soundsync-backup'?t.liked:true});for(const p of incoming.playlists){const old=next.playlists.find(x=>x.id===p.id);if(old){old.urls=[...new Set([...old.urls,...p.urls])]}else{if(next.playlists.length>=200)throw Error('Поддерживается до 200 плейлистов.');next.playlists.push(p)}}return next}
-export function exportBackup(state){return{type:'soundsync-backup',version:2,tracks:state.tracks,playlists:state.playlists}}
+export function cleanPlaylists(value, tracks) {
+  const result = [],
+    ids = new Set();
+  for (const p of Array.isArray(value) ? value.slice(0, 200) : []) {
+    if (!p || typeof p.name !== 'string' || !p.name.trim()) continue;
+    const id = String(p.id || '').slice(0, 100);
+    if (!id || id.startsWith('curated:') || id.startsWith('builtin:') || ids.has(id)) continue;
+    ids.add(id);
+    const urls = [];
+    for (const v of Array.isArray(p.urls) ? p.urls.slice(0, 10000) : []) {
+      try {
+        const u = soundcloudUrl(v);
+        if (!urls.includes(u) && tracks.some((t) => t.url === u)) urls.push(u);
+      } catch {}
+    }
+    result.push({ id, name: p.name.trim().slice(0, 100), urls });
+  }
+  return result;
+}
+export function importBackup(state, raw) {
+  if (!raw || typeof raw !== 'object' || !Array.isArray(raw.tracks) || raw.tracks.length > 20000)
+    throw Error('Это не файл переноса SoundSync.');
+  const incoming = readState(JSON.stringify(raw));
+  if (raw.tracks.length && !incoming.tracks.length)
+    throw Error('В файле нет подходящих треков SoundCloud.');
+  const next = readState(JSON.stringify(state));
+  for (const t of incoming.tracks)
+    mergeTrack(next.tracks, { ...t, liked: raw.type === 'soundsync-backup' ? t.liked : true });
+  for (const p of incoming.playlists) {
+    const old = next.playlists.find((x) => x.id === p.id);
+    if (old) {
+      old.urls = [...new Set([...old.urls, ...p.urls])];
+    } else {
+      if (next.playlists.length >= 200) throw Error('Поддерживается до 200 плейлистов.');
+      next.playlists.push(p);
+    }
+  }
+  return next;
+}
+export function exportBackup(state) {
+  return { type: 'soundsync-backup', version: 2, tracks: state.tracks, playlists: state.playlists };
+}

@@ -1,19 +1,97 @@
-const assert=require('node:assert/strict'),{evidence,profile,select,createDiscovery}=require('../app/recommendation-language.cjs');
-const track=(id,artist,title,extra={})=>({id:'sc-'+id,scId:String(id),pageUrl:`https://soundcloud.com/owner-${id}/song-${id}`,artist,title,...extra});
-const local=[track(1,'dabbackwood','назад в кресты'),track(2,'FACE','Русская песня')],liked=[track(3,'Новый артист','New sound')],taste=profile(local,liked);
-assert.equal(evidence(track(4,'Unknown','English title')),0,'Latin text is neutral');
-assert.ok(evidence(track(5,'FACE','English Title'),taste.knownArtists)>=3,'Russian-scene artist with Latin title stays preferred');
-assert.ok(evidence(track(6,'Artist','English',{tags:'russian rap'}))>=3,'Tags establish preference');
-assert.ok(evidence(track(7,'Artist','English',{language:'ru'}))>=3,'Explicit language is evidence');
-assert.equal(evidence(track(8,'Unknown','English',{country:'RU'})),0,'Country is not language');
-assert.ok(evidence(track(9,'Juky San ft. Bùi','Người Đầu Tiên'))<0,'Vietnamese signals reduce priority');
-const russian=Array.from({length:10},(_,i)=>track(20+i,'FACE '+i,'Русская песня '+i));
-const foreign=Array.from({length:10},(_,i)=>track(40+i,'歌手 '+i,'中文歌曲 '+i));
-const list=select([...foreign,...russian,track(99,'New Band','New discovery')],taste,{random:()=>.5});
-assert.equal(list.length,6);assert.ok(list.filter(t=>evidence(t,taste.knownArtists)>=3).length>=5);assert.ok(list.every(t=>!t.title.includes('中文')));
-assert.equal(new Set(list.map(t=>t.id)).size,6);
-assert.ok(select([...russian,...foreign],taste,{exclude:new Set(list.map(t=>t.id))}).every(t=>!list.some(x=>x.id===t.id)));
-assert.ok(select(foreign,taste).length<=1,'Sparse foreign pools cannot fill the whole recommendation row');
-let linked=0;
-const discovery=createDiscovery({getLibrary:()=>({tracks:local}),getFavorites:()=>liked,getHistory:()=>[],getFavoriteIds:async()=>[],search:async({query})=>query==='FACE'?[track(2,'FACE','Русская песня')]:query==='dabbackwood'?[local[0]]:russian,related:async()=>{linked++;return russian},discover:async()=>foreign});
-(async()=>{const found=await discovery.random([]);assert.equal(found.length,6);assert.ok(linked>0,'Discovery actually uses library/favorite relationship sources');const fallback=createDiscovery({getLibrary:()=>({tracks:[]}),getFavorites:()=>[],getHistory:()=>[],search:async()=>russian,related:async()=>{throw Error('offline')},discover:async()=>{throw Error('failed source')}});assert.ok((await fallback.random()).length>=4);console.log('Language recommendations passed: multiple signals, Latin titles, unknown/country neutrality, diverse Russian preference, exclusions and source-failure fallback')})().catch(e=>{console.error(e);process.exitCode=1});
+const assert = require('node:assert/strict'),
+  { evidence, profile, select, createDiscovery } = require('../app/recommendation-language.cjs');
+const track = (id, artist, title, extra = {}) => ({
+  id: 'sc-' + id,
+  scId: String(id),
+  pageUrl: `https://soundcloud.com/owner-${id}/song-${id}`,
+  artist,
+  title,
+  ...extra,
+});
+const local = [track(1, 'dabbackwood', 'назад в кресты'), track(2, 'FACE', 'Русская песня')],
+  liked = [track(3, 'Новый артист', 'New sound')],
+  taste = profile(local, liked);
+assert.equal(evidence(track(4, 'Unknown', 'English title')), 0, 'Latin text is neutral');
+assert.ok(
+  evidence(track(5, 'FACE', 'English Title'), taste.knownArtists) >= 3,
+  'Russian-scene artist with Latin title stays preferred'
+);
+assert.ok(
+  evidence(track(6, 'Artist', 'English', { tags: 'russian rap' })) >= 3,
+  'Tags establish preference'
+);
+assert.ok(
+  evidence(track(7, 'Artist', 'English', { language: 'ru' })) >= 3,
+  'Explicit language is evidence'
+);
+assert.equal(
+  evidence(track(8, 'Unknown', 'English', { country: 'RU' })),
+  0,
+  'Country is not language'
+);
+assert.ok(
+  evidence(track(9, 'Juky San ft. Bùi', 'Người Đầu Tiên')) < 0,
+  'Vietnamese signals reduce priority'
+);
+const russian = Array.from({ length: 10 }, (_, i) =>
+  track(20 + i, 'FACE ' + i, 'Русская песня ' + i)
+);
+const foreign = Array.from({ length: 10 }, (_, i) => track(40 + i, '歌手 ' + i, '中文歌曲 ' + i));
+const list = select([...foreign, ...russian, track(99, 'New Band', 'New discovery')], taste, {
+  random: () => 0.5,
+});
+assert.equal(list.length, 6);
+assert.ok(list.filter((t) => evidence(t, taste.knownArtists) >= 3).length >= 5);
+assert.ok(list.every((t) => !t.title.includes('中文')));
+assert.equal(new Set(list.map((t) => t.id)).size, 6);
+assert.ok(
+  select([...russian, ...foreign], taste, { exclude: new Set(list.map((t) => t.id)) }).every(
+    (t) => !list.some((x) => x.id === t.id)
+  )
+);
+assert.ok(
+  select(foreign, taste).length <= 1,
+  'Sparse foreign pools cannot fill the whole recommendation row'
+);
+let linked = 0;
+const discovery = createDiscovery({
+  getLibrary: () => ({ tracks: local }),
+  getFavorites: () => liked,
+  getHistory: () => [],
+  getFavoriteIds: async () => [],
+  search: async ({ query }) =>
+    query === 'FACE'
+      ? [track(2, 'FACE', 'Русская песня')]
+      : query === 'dabbackwood'
+        ? [local[0]]
+        : russian,
+  related: async () => {
+    linked++;
+    return russian;
+  },
+  discover: async () => foreign,
+});
+(async () => {
+  const found = await discovery.random([]);
+  assert.equal(found.length, 6);
+  assert.ok(linked > 0, 'Discovery actually uses library/favorite relationship sources');
+  const fallback = createDiscovery({
+    getLibrary: () => ({ tracks: [] }),
+    getFavorites: () => [],
+    getHistory: () => [],
+    search: async () => russian,
+    related: async () => {
+      throw Error('offline');
+    },
+    discover: async () => {
+      throw Error('failed source');
+    },
+  });
+  assert.ok((await fallback.random()).length >= 4);
+  console.log(
+    'Language recommendations passed: multiple signals, Latin titles, unknown/country neutrality, diverse Russian preference, exclusions and source-failure fallback'
+  );
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

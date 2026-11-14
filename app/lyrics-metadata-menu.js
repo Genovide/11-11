@@ -1,2 +1,27 @@
-
-const openTrackMenuBeforeLyricsMetadata=openTrackMenu;openTrackMenu=function(t,anchor){openTrackMenuBeforeLyricsMetadata(t,anchor);const button=node('button','','Уточнить данные по тексту · LRCLIB');button.onclick=()=>{closeTrackMenu();openLyricsFinder(t)};trackMenu.append(button);if(!t.remote&&t.lyricsMetadataSource){const reset=node('button','','Вернуть данные до LRCLIB');reset.onclick=async()=>{closeTrackMenu();try{const updated=await window.lumen.lyricsMetadataApply(t.id,null,{reset:true});applyLyricsMetadata(t,updated);toast('Исходные данные восстановлены')}catch(e){toast(cleanError(e))}};trackMenu.append(reset)}const top=parseFloat(trackMenu.style.top)||12;if(top+trackMenu.offsetHeight>innerHeight-12)trackMenu.style.top=Math.max(12,innerHeight-trackMenu.offsetHeight-12)+'px'};
+const openTrackMenuBeforeLyricsMetadata = openTrackMenu;
+openTrackMenu = function (t, anchor) {
+  openTrackMenuBeforeLyricsMetadata(t, anchor);
+  const button = node('button', '', 'Уточнить данные по тексту · LRCLIB');
+  button.onclick = () => {
+    closeTrackMenu();
+    openLyricsFinder(t);
+  };
+  trackMenu.append(button);
+  if (!t.remote && t.lyricsMetadataSource) {
+    const reset = node('button', '', 'Вернуть данные до LRCLIB');
+    reset.onclick = async () => {
+      closeTrackMenu();
+      try {
+        const updated = await window.lumen.lyricsMetadataApply(t.id, null, { reset: true });
+        applyLyricsMetadata(t, updated);
+        toast('Исходные данные восстановлены');
+      } catch (e) {
+        toast(cleanError(e));
+      }
+    };
+    trackMenu.append(reset);
+  }
+  const top = parseFloat(trackMenu.style.top) || 12;
+  if (top + trackMenu.offsetHeight > innerHeight - 12)
+    trackMenu.style.top = Math.max(12, innerHeight - trackMenu.offsetHeight - 12) + 'px';
+};
