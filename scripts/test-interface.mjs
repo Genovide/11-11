@@ -65,6 +65,16 @@ try {
     deviceScaleFactor: 1,
     mobile: false,
   });
+  for (let ready = 0; ready < 100; ready++) {
+    if (
+      await evaluate(
+        `document.readyState==='complete'&&!!document.querySelector('.home-nav')&&typeof library!=='undefined'&&library.tracks.length>=12`
+      )
+    )
+      break;
+    if (ready === 99) throw Error('Player scripts did not become ready');
+    await pause(100);
+  }
   await evaluate(
     `Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});localStorage.setItem('volume','0');audio.volume=0;audio.muted=true;$('volume').value='0';$('volume').dispatchEvent(new Event('input'));document.querySelector('.home-nav').click();setFlatTheme(true);playList(library.tracks,0);getComputedStyle(document.querySelector('.now-panel')).backgroundColor`
   );
@@ -240,6 +250,156 @@ try {
   assert.equal(detail.reviews[0].path, '/reviews/192216');
   assert.ok(!detail.reviews[0].body.includes('11.11.2026'));
   checks.push('RZT modern cards, zero scores, authors, review content and rating isolation');
+  // Editor and mini-player share the live library/audio, including when the main window is hidden.
+  await evaluate(
+    `document.querySelector('[data-view="tracks"]').click();window.__cardOriginalTitle=library.tracks[0].title;openTrackMenu(library.tracks[0],document.querySelector('.track-options'));[...trackMenu.querySelectorAll('button')].find(b=>b.textContent==='Редактировать карточку').click()`
+  );
+  const until = async (expression) => {
+    for (let attempt = 0; attempt < 60; attempt++) {
+      if (await evaluate(expression)) return;
+      await pause(100);
+    }
+    throw Error('Timed out: ' + expression);
+  };
+  await until(`document.querySelector('#track-card-dialog').open`);
+  await evaluate(
+    `document.querySelector('#card-title').value='Карточка 1.2.6';document.querySelector('#card-year').value='2026';document.querySelector('#track-card-dialog .card-actions .primary').click()`
+  );
+  await until(`!document.querySelector('#track-card-dialog').open`);
+  await check(
+    'Track card saves metadata through the native backend',
+    `library.tracks[0].title==='Карточка 1.2.6'&&library.tracks[0].year===2026`
+  );
+  await evaluate(
+    `openTrackMenu(library.tracks[0],document.querySelector('.track-options'));[...trackMenu.querySelectorAll('button')].find(b=>b.textContent==='Редактировать карточку').click()`
+  );
+  await until(
+    `document.querySelector('#track-card-dialog').open&&!document.querySelector('#track-card-dialog .card-actions .quiet').disabled`
+  );
+  await evaluate(`document.querySelector('#track-card-dialog .card-actions .quiet').click()`);
+  await until(`!document.querySelector('#track-card-dialog').open`);
+  await check(
+    'Original track card can be restored',
+    `library.tracks[0].title===window.__cardOriginalTitle`
+  );
+  await evaluate(`playList(library.tracks,0)`);
+  await pause(300);
+  await evaluate(`$('open-mini-player').focus()`);
+  await until(`getComputedStyle($('open-mini-player')).opacity==='1'`);
+  await check(
+    'Mini-player launcher is on the artwork and keyboard-accessible',
+    `$('mini-cover').parentElement.contains($('open-mini-player'))&&!document.querySelector('.volume-control #open-mini-player')&&getComputedStyle($('open-mini-player')).opacity==='1'`
+  );
+  await evaluate(`window.__miniSource=audio.src;window.lumen.miniPlayerOpen()`);
+  const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json(),
+    miniTarget = targets.find((p) => p.url.endsWith('/mini-player.html'));
+  assert.ok(miniTarget, 'Native mini-player window exists');
+  const miniSocket = new WebSocket(miniTarget.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => {
+    miniSocket.onopen = resolve;
+    miniSocket.onerror = reject;
+  });
+  let miniId = 0;
+  const miniPending = new Map();
+  miniSocket.onmessage = (event) => {
+    const message = JSON.parse(event.data);
+    if (message.id && miniPending.has(message.id)) {
+      const request = miniPending.get(message.id);
+      miniPending.delete(message.id);
+      message.error
+        ? request.reject(Error(JSON.stringify(message.error)))
+        : request.resolve(message.result);
+    }
+  };
+  const miniEval = (expression) =>
+    new Promise((resolve, reject) => {
+      miniPending.set(++miniId, {
+        resolve: (result) => {
+          if (result.exceptionDetails) reject(Error(JSON.stringify(result.exceptionDetails)));
+          else resolve(result.result.value);
+        },
+        reject,
+      });
+      miniSocket.send(
+        JSON.stringify({
+          id: miniId,
+          method: 'Runtime.evaluate',
+          params: { expression, returnByValue: true, awaitPromise: true, userGesture: true },
+        })
+      );
+    });
+  assert.equal(await miniEval(`document.querySelectorAll('button svg').length>=8`), true);
+  checks.push('Mini-player uses SVG controls');
+  await miniEval(`document.querySelector('#play').click()`);
+  await until('audio.paused');
+  await miniEval(`document.querySelector('#play').click()`);
+  await until('!audio.paused');
+  await miniEval(
+    `document.querySelector('#volume').value=.25;document.querySelector('#volume').dispatchEvent(new Event('input'))`
+  );
+  await until('Math.abs(audio.volume-.25)<.01');
+  await miniEval(`document.querySelector('#mute').click()`);
+  await until('audio.volume===0');
+  await miniEval(`document.querySelector('#mute').click()`);
+  await until('Math.abs(audio.volume-.25)<.01');
+  await miniEval(
+    `document.querySelector('#seek').value=.5;document.querySelector('#seek').dispatchEvent(new Event('change'))`
+  );
+  await until('audio.currentTime>=44');
+  checks.push('Mini-player pause, resume, volume, mute and seeking control the original audio');
+  const miniClosed = new Promise((resolve) =>
+    miniSocket.addEventListener('close', resolve, { once: true })
+  );
+  miniSocket.send(
+    JSON.stringify({
+      id: ++miniId,
+      method: 'Input.dispatchKeyEvent',
+      params: { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 },
+    })
+  );
+  await Promise.race([miniClosed, pause(2500)]);
+  await check(
+    'Escape returns to the main player without restarting audio',
+    `!audio.paused&&audio.src===window.__miniSource&&audio.currentTime>=44`
+  );
+  const afterMini = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+  assert.equal(
+    afterMini.some((p) => p.url.endsWith('/mini-player.html')),
+    false
+  );
+  miniSocket.close();
+
+  await call('Emulation.setDeviceMetricsOverride', {
+    width: 1600,
+    height: 980,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await evaluate(`$('feedback-open').click()`);
+  await check(
+    'General feedback form is available outside recommendations',
+    `$('feedback-dialog').open&&typeof window.lumen.feedbackOpen==='function'&&$('feedback-type').options.length===3&&$('feedback-dialog').textContent.includes('о любой части приложения')`
+  );
+  await evaluate(
+    `$('feedback-title').value='Проверка формы';$('feedback-message').value='Описание общей проблемы с приложением.';$('feedback-info').checked=false`
+  );
+  await check(
+    'Feedback allows a message without system information',
+    `$('feedback-form').checkValidity()&&!$('feedback-info').checked&&!!$('feedback-contact')&&$('feedback-submit').textContent==='Отправить'`
+  );
+  await screenshot('feedback-dialog');
+  await evaluate(`$('feedback-dialog').querySelector('.feedback-close').click()`);
+  await check('Feedback can close without opening GitHub', `!$('feedback-dialog').open`);
+  await call('Emulation.setDeviceMetricsOverride', {
+    width: 1000,
+    height: 720,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await check(
+    'Feedback launcher stays accessible in a short window',
+    `(()=>{const r=$('feedback-open').getBoundingClientRect(),p=document.querySelector('.player').getBoundingClientRect();return r.top>=0&&r.bottom<=54&&r.right<=innerWidth})()`
+  );
   assert.equal(errors.length, 0, 'No renderer exceptions');
   checks.push('No renderer exceptions');
   fs.writeFileSync(path.join(output, 'report.json'), JSON.stringify({ ok: true, checks }, null, 2));

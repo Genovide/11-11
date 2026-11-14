@@ -22,7 +22,7 @@ def metadata(info):
  if not url.startswith(('https://soundcloud.com/','https://www.soundcloud.com/')):url='https://soundcloud.com/'+str(info.get('uploader_id',''))+'/'+str(info.get('id',''))
  thumb=info.get('thumbnail')or next((t.get('url')for t in reversed(info.get('thumbnails')or[])if t.get('url')),'')
  title=repair_text(title);artist=repair_text(str(artist))
- return dict(id='sc-'+str(info['id']),scId=str(info['id']),remote=True,genre=info.get('genre')or ' '.join(info.get('genres')or []),tags=info.get('tags')or [],bpm=info.get('bpm'),title=title,artist=str(artist),album=repair_text(info.get('album')or'SoundCloud Single'),albumartist=str(artist),duration=info.get('duration')or 0,cover=thumb or'',pageUrl=url,lyrics='',downloadable=any(f.get('format_id')=='download'for f in (info.get('formats')or[])))
+ return dict(id='sc-'+str(info['id']),scId=str(info['id']),remote=True,genre=info.get('genre')or ' '.join(info.get('genres')or []),tags=info.get('tags')or [],description=str(description)[:2000],language=str(info.get('language')or '')[:30],bpm=info.get('bpm'),title=title,artist=str(artist),album=repair_text(info.get('album')or'SoundCloud Single'),albumartist=str(artist),duration=info.get('duration')or 0,cover=thumb or'',pageUrl=url,lyrics='',downloadable=any(f.get('format_id')=='download'for f in (info.get('formats')or[])))
 
 def valid_page(url):
  from urllib.parse import urlparse

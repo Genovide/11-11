@@ -1,0 +1,41 @@
+const assert = require('node:assert/strict'),
+  setup = require('../app/feedback.cjs');
+const input = {
+  id: '12345678-test-12345678',
+  type: 'bug',
+  title: 'Кнопка не работает',
+  message: 'Нажимаю на кнопку, ничего не происходит.',
+  contact: '@test',
+  includeInfo: true,
+};
+assert.equal(setup.payload(input, { version: '1.2.6', platform: 'win32' }).platform, 'Windows');
+assert.ok(!setup.payload({ ...input, includeInfo: false }, { version: '1.2.6' }).version);
+assert.throws(() => setup.payload({ ...input, message: 'short' }));
+let handler,
+  sent = 0;
+const sender = {};
+setup({
+  ipcMain: { handle: (key, fn) => (handler = fn) },
+  getWindow: () => ({ webContents: sender }),
+  version: '1.2.6',
+  endpoint: 'https://feedback.example/feedback',
+  fetchImpl: async (url, options) => {
+    sent++;
+    const body = JSON.parse(options.body);
+    assert.equal(body.contact, '@test');
+    assert.ok(!body.history && !body.tracks);
+    return Response.json({ ok: true, id: body.id });
+  },
+});
+(async () => {
+  await assert.rejects(() => handler({ sender: {} }, input));
+  assert.equal(sent, 0);
+  assert.equal((await handler({ sender }, input)).sent, true);
+  assert.equal(sent, 1);
+  console.log(
+    'PASS desktop feedback: direct send, validation, optional info, contact, sender authorization'
+  );
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

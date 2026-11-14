@@ -1,0 +1,126 @@
+const assert = require('node:assert/strict'),
+  fs = require('node:fs/promises'),
+  path = require('node:path');
+const setup = require('../app/playlists.cjs'),
+  { playlistUrl, readPlaylist } = require('../app/soundcloud-playlist-import.cjs');
+assert.equal(
+  playlistUrl('https://m.soundcloud.com/a/sets/b?si=x'),
+  'https://soundcloud.com/a/sets/b'
+);
+for (const bad of [
+  'http://soundcloud.com/a/sets/b',
+  'https://evil.test/a/sets/b',
+  'https://soundcloud.com/a/song',
+  'https://user:pass@soundcloud.com/a/sets/b',
+])
+  assert.throws(() => playlistUrl(bad));
+(async () => {
+  const imported = await readPlaylist('https://soundcloud.com/a/sets/b', {
+    api: async (endpoint) =>
+      endpoint === 'resolve'
+        ? {
+            kind: 'playlist',
+            title: 'Public list',
+            track_count: 4,
+            tracks: [
+              { id: 1 },
+              { kind: 'track', id: 2, permalink_url: 'https://soundcloud.com/a/song-2' },
+              { id: 1 },
+              { id: 3 },
+            ],
+          }
+        : [
+            { kind: 'track', id: 1, permalink_url: 'https://soundcloud.com/a/song-1' },
+            { kind: 'track', id: 3, permalink_url: 'https://soundcloud.com/a/song-3' },
+          ],
+    mapTrack: (t) => ({
+      id: 'sc-' + t.id,
+      scId: String(t.id),
+      remote: true,
+      pageUrl: t.permalink_url,
+      title: 'Song ' + t.id,
+      artist: 'Artist',
+      playbackUnavailable: t.id === 3,
+    }),
+  });
+  assert.deepEqual(
+    imported.tracks.map((t) => t.id),
+    ['sc-1', 'sc-2']
+  );
+  assert.equal(imported.duplicates, 1);
+  assert.equal(imported.unavailable, 1);
+  await fs.mkdir(path.resolve('work'), { recursive: true });
+  const root = await fs.mkdtemp(path.resolve('work/playlists-test-')),
+    sender = {},
+    local = { id: 'local-1', title: 'Local', artist: 'Artist', path: 'C:/private/music/song.mp3' },
+    remote = imported.tracks[0],
+    remoteMap = new Map([[remote.id, remote]]);
+  let library = [local];
+  function boot() {
+    const handlers = new Map();
+    setup({
+      app: { getPath: () => root },
+      ipcMain: { handle: (key, fn) => handlers.set(key, fn) },
+      getWindow: () => ({ webContents: sender }),
+      getLibrary: () => ({ tracks: library }),
+      getRemoteTrack: (id) => remoteMap.get(id),
+      registerRemote: (items) => {
+        for (const t of items) remoteMap.set(t.id, t);
+        return items;
+      },
+      readRemotePlaylist: async () => imported,
+    });
+    return (key, ...args) => handlers.get(key)({ sender }, ...args);
+  }
+  let call = boot();
+  assert.equal((await call('playlists-list'))[0].id, 'builtin:frequent');
+  const shared = (await call('playlists-list')).find((p) => p.id === 'curated:author');
+  assert.ok(shared?.builtin && shared.curated);
+  assert.equal(shared.cover, 'author-recommends.png');
+  const common = await call('playlists-get', shared.id);
+  assert.equal(common.tracks.length, 30);
+  assert.ok(common.tracks.every((t) => t.remote && t.pageUrl));
+  await assert.rejects(() => call('playlists-delete', shared.id));
+  await assert.rejects(() => call('playlists-add', shared.id, local.id));
+  const p = await call('playlists-create', 'В дорогу');
+  assert.equal((await call('playlists-add', p.id, local.id)).added, true);
+  assert.equal((await call('playlists-add', p.id, local.id)).added, false);
+  await call('playlists-add', p.id, remote.id);
+  await call('playlists-order', p.id, [remote.id, local.id]);
+  assert.deepEqual(
+    (await call('playlists-get', p.id)).tracks.map((t) => t.id),
+    [remote.id, local.id]
+  );
+  await assert.rejects(() => call('playlists-order', p.id, [local.id, local.id]));
+  await call('playlists-rename', p.id, 'Мой плейлист');
+  call = boot();
+  remoteMap.clear();
+  assert.equal((await call('playlists-get', p.id)).name, 'Мой плейлист');
+  assert.equal((await call('playlists-get', p.id)).tracks[0].pageUrl, remote.pageUrl);
+  library = [];
+  assert.equal((await call('playlists-get', p.id)).tracks[1].missing, true);
+  library = [local];
+  await call('playlists-record', local.id, 'session-1');
+  await call('playlists-record', local.id, 'session-1');
+  await call('playlists-record', local.id, 'session-2');
+  assert.equal((await call('playlists-get', 'builtin:frequent')).tracks[0].playCount, 2);
+  const preview = await call('playlists-import-preview', 'url');
+  const copy = await call('playlists-import-commit', preview.token);
+  assert.equal((await call('playlists-get', copy.id)).tracks.length, 2);
+  const repeated = await call('playlists-import-preview', 'url');
+  await assert.rejects(() => call('playlists-import-commit', repeated.token));
+  const contents = await fs.readFile(path.join(root, 'playlists.json'), 'utf8');
+  assert.ok(!contents.includes('C:/private'));
+  assert.ok(!contents.includes('favoriteIds'));
+  await call('playlists-remove', p.id, local.id);
+  assert.equal((await call('playlists-get', p.id)).tracks.length, 1);
+  assert.ok(library.includes(local));
+  await call('playlists-delete', p.id);
+  await assert.rejects(() => call('playlists-get', p.id));
+  console.log(
+    'Playlists passed: safe links, complete ordered import, hydration, unavailable/duplicates, create/add/reorder/rename/remove/delete, restart, missing local files, no private paths, frequent-play dedupe and repeat import protection'
+  );
+})().catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+});

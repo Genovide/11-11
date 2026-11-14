@@ -166,7 +166,7 @@ let visualPreset = [
   visualPaints = 0;
 function updateImmersive() {
   if (!current) return;
-  const artKey = current.id + ':' + current.cover;
+  const artKey = current.id + ':' + current.cover + ':' + (current.customCover || '');
   if (immersiveArt.dataset.track !== artKey) {
     immersiveArt.replaceChildren(art(current, 'immersive-image'));
     immersiveArt.dataset.track = artKey;

@@ -1,8 +1,11 @@
-const CACHE = 'soundsync-pocket-shell-v3',
+const CACHE = 'soundsync-pocket-shell-v6',
   FILES = [
+    './feedback.js',
     './',
     './index.html',
     './style.css',
+    './curated.js',
+    './assets/author-recommends.png',
     './core.js',
     './app.js',
     './player.js',
