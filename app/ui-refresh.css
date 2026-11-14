@@ -516,6 +516,8 @@ body > .now-panel > .now-summary.scrollable:not(.at-end) {
 /* Кнопка шпаргалки — справа, рядом с «Обратной связью». */
 .titlebar > .keys-open {
   margin-left: auto;
+  /* На Windows шапка — зона перетаскивания окна; без этого клик по кнопке тянул окно. */
+  -webkit-app-region: no-drag;
 }
 .titlebar > .keys-open + .feedback-open {
   margin-left: 0;

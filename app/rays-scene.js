@@ -38,9 +38,11 @@ float beams(float angle, float density, float drift, float seed) {
   return smoothstep(0.42, 0.95, n);
 }
 
+// В GLSL smoothstep с обратным порядком краёв и pow с отрицательным основанием не определены:
+// на Windows (Direct3D через ANGLE) они давали NaN, и весь кадр становился чёрным.
 void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * resolution) / resolution.y;
-  float r = length(p), a = atan(p.y, p.x);
+  float r = length(p), a = atan(p.y, p.x + 1e-6);
 
   float reach = 0.55 + bass * 0.75 + level * 0.25;
   vec3 color = vec3(0.0);
@@ -65,22 +67,23 @@ void main() {
   color += mix(colorB, vec3(1.0), 0.45) * core * (0.3 + bass * 0.6 + hit * 0.9);
 
   // Кольцо, которое расходится от ядра на сильной доле.
-  float wave = exp(-pow((r - ring) * 26.0, 2.0)) * hit * smoothstep(0.0, 0.08, ring);
+  float ringDistance = (r - ring) * 26.0;
+  float wave = exp(-ringDistance * ringDistance) * hit * smoothstep(0.0, 0.08, ring);
   color += mix(colorC, vec3(1.0), 0.3) * wave * 0.9;
 
   // Искры на высоких частотах: редкие точки, которые плывут от центра.
   vec2 sparkCell = vec2(a * 18.0, r * 24.0 - time * (0.6 + high * 2.0));
-  float spark = step(0.985, hash(floor(sparkCell))) * smoothstep(0.5, 0.0, length(fract(sparkCell) - 0.5));
+  float spark = step(0.985, hash(floor(sparkCell))) * (1.0 - smoothstep(0.0, 0.5, length(fract(sparkCell) - 0.5)));
   color += vec3(1.0) * spark * high * 0.9 * exp(-r * 1.6);
 
   // Тёмная подложка в цвет обложки, мягкое тонирование и виньетка.
-  vec3 base = mix(colorC * 0.06, colorB * 0.1, smoothstep(0.9, 0.0, r));
+  vec3 base = mix(colorC * 0.06, colorB * 0.1, 1.0 - smoothstep(0.0, 0.9, r));
   color = base + color * intensity;
   // Тонирование по яркости сохраняет оттенок: прежнее покомпонентное выбеливало цвета.
   float lum = dot(color, vec3(0.299, 0.587, 0.114));
   color *= (1.0 - exp(-lum * 1.3)) / max(lum, 1e-4);
   color = mix(color, vec3(1.0), smoothstep(0.85, 2.2, lum) * 0.5);
-  color *= smoothstep(1.25, 0.35, length(p * vec2(0.85, 1.0)));
+  color *= 1.0 - smoothstep(0.35, 1.25, length(p * vec2(0.85, 1.0)));
   // Дизеринг убирает полосы на плавных градиентах.
   color += (hash(gl_FragCoord.xy + fract(time)) - 0.5) / 255.0;
   gl_FragColor = vec4(color, 1.0);
@@ -152,10 +155,22 @@ void main() {
       ])
         this.uniforms[name] = gl.getUniformLocation(program, name);
       this.gl = gl;
+      // Видеокарта может сбросить контекст (сон, смена GPU, сбой драйвера): тогда кадр чёрный.
+      if (!this.watchingContext) {
+        this.watchingContext = true;
+        this.canvas.addEventListener('webglcontextlost', (event) => {
+          event.preventDefault();
+          this.gl = null;
+          this.lost = true;
+        });
+        this.canvas.addEventListener('webglcontextrestored', () => {
+          this.lost = false;
+        });
+      }
     }
     // palette — три цвета обложки [r,g,b] 0..255; response — AudioResponse.
     draw(target, width, height, response, palette, dt, moving, intensity) {
-      if (this.error) return false;
+      if (this.error || this.lost) return false;
       try {
         if (!this.gl) this.init();
       } catch (e) {
@@ -209,6 +224,33 @@ void main() {
       gl.uniform3fv(u.colorB, this.colors[1]);
       gl.uniform3fv(u.colorC, this.colors[2]);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      // Проверка вывода: в центре всегда светится ядро, поэтому полностью чёрный кадр означает,
+      // что драйвер не справился с шейдером. Тогда отдаём место запасной 2D-сцене.
+      if (this.frames === 8 || this.frames === 60) {
+        const pixel = new Uint8Array(4);
+        let lit = 0;
+        for (const [x, y] of [
+          [0.5, 0.5],
+          [0.45, 0.55],
+          [0.6, 0.4],
+        ]) {
+          gl.readPixels(
+            Math.floor(w * x),
+            Math.floor(h * y),
+            1,
+            1,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            pixel
+          );
+          lit += pixel[0] + pixel[1] + pixel[2];
+        }
+        if (!lit || gl.isContextLost()) {
+          this.error = Error('Видеокарта не отрисовала сцену «Лучи»');
+          console.warn('Rays scene:', this.error.message);
+          return false;
+        }
+      }
       target.save();
       target.setTransform(1, 0, 0, 1, 0, 0);
       target.imageSmoothingQuality = 'high';
