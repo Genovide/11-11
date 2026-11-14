@@ -1,3 +1,5 @@
+import likesImport from './soundcloud-likes-import.cjs';
+import playlistImport from './soundcloud-playlist-import.cjs';
 import selection from './wave-selection.cjs';
 import queries from './wave-query.cjs';
 const ASSETS = {}; // Replaced by scripts/build.mjs; assets are bundled, not fetched remotely.
@@ -361,7 +363,46 @@ export function createSoundCloud(fetchImpl = fetch) {
       throw Error('Нет доступного потока для этого трека. Открой его в SoundCloud.');
     });
   }
-  return { search, resolve, random, wave, stream };
+  async function expandImportUrl(value) {
+    let url = pageUrl(String(value || '').trim());
+    for (let hop = 0; hop < 6; hop++) {
+      if (new URL(url).hostname !== 'on.soundcloud.com') return url;
+      const r = await fetchImpl(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(10000),
+        headers: { Accept: 'text/html' },
+      });
+      if (![301, 302, 303, 307, 308].includes(r.status))
+        throw Error(
+          'Не удалось раскрыть короткую ссылку SoundCloud. Скопируй адрес профиля из браузера.'
+        );
+      const location = r.headers.get('location');
+      if (!location) throw Error('SoundCloud не вернул полный адрес ссылки.');
+      url = pageUrl(new URL(location, url).href);
+    }
+    throw Error('Слишком много перенаправлений SoundCloud.');
+  }
+  async function importCollection(input) {
+    const url = await expandImportUrl(input.url);
+    const mapTrack = (t) => ({ ...apiTrack(t), playbackUnavailable: !playable(t) });
+    if (input.kind === 'likes') {
+      const r = await likesImport.readLikes(url, { api, mapTrack, maxPages: 50 });
+      return {
+        kind: 'likes',
+        name: r.profile.name,
+        tracks: r.tracks,
+        unavailable: r.stats.unavailable,
+        scanned: r.stats.scanned,
+        playlists: r.stats.playlists,
+      };
+    }
+    if (input.kind === 'playlist') {
+      const r = await playlistImport.readPlaylist(url, { api, mapTrack });
+      return { ...r, kind: 'playlist' };
+    }
+    throw Error('Выбери импорт лайков или плейлиста.');
+  }
+  return { search, resolve, random, wave, stream, importCollection };
 }
 const soundcloud = createSoundCloud();
 const json = (data, status = 200) =>
@@ -409,6 +450,8 @@ export default {
         }
         if (!body || typeof body !== 'object') return json({ error: 'Некорректный запрос' }, 400);
         switch (url.pathname) {
+          case '/api/import':
+            return json(await soundcloud.importCollection(body));
           case '/api/resolve':
             return json({ track: await soundcloud.resolve(body.url) });
           case '/api/search':

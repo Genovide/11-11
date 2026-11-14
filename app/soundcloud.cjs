@@ -37,6 +37,8 @@ function apiTrack(t) {
     urn: t.urn,
     genre: t.genre || '',
     tags: t.tag_list || '',
+    description: String(t.description || '').slice(0, 2000),
+    language: String(t.language || t.spoken_language || '').slice(0, 30),
     bpm: Number(t.bpm) || null,
     remote: true,
     originalTitle: raw,
@@ -67,6 +69,7 @@ module.exports = function setupSoundCloud({
   readTrack,
   isAligning,
   send,
+  applyTrackCard = (t) => t,
   fetchImpl = fetch,
   workerImpl,
 }) {
@@ -289,6 +292,7 @@ module.exports = function setupSoundCloud({
     const result = [];
     for (let t of items) {
       if (t) t = identityStore.apply(require('./text-repair.js').repairTrackMetadata(t));
+      if (t) t = applyTrackCard(t);
       if (t && isExcluded(t)) continue;
       if (!t?.scId || !t.pageUrl || t.access === 'blocked' || t.access === 'preview') continue;
       try {
@@ -389,6 +393,26 @@ module.exports = function setupSoundCloud({
   }
   const { normalize, artistKey, owner, identity, selectDiverse } = require('./wave-selection.cjs'),
     stations = new Map();
+  const languageDiscovery = require('./recommendation-language.cjs').createDiscovery({
+    getLibrary,
+    getFavorites: () => [...savedFavorites.values()],
+    getHistory: () => [...historyTracks.values()],
+    getFavoriteIds: async () => {
+      try {
+        return (
+          JSON.parse(
+            await fs.readFile(path.join(app.getPath('userData'), 'ui-preferences.json'), 'utf8')
+          ).favoriteIds || []
+        );
+      } catch {
+        return [];
+      }
+    },
+    search,
+    related: relatedStrict,
+    discover: discoveryPage,
+    isExcluded,
+  });
   const detailCache = new Map();
   async function enrichUnknown(items) {
     const unknown = items
@@ -435,7 +459,7 @@ module.exports = function setupSoundCloud({
           station.offset
         );
         station.offset += 50;
-        const batch = selectDiverse(items, {
+        const batch = selectDiverse(await languageDiscovery.order(items), {
           seenIds: station.seenIds,
           seenIdentities: station.seenIdentities,
           recentArtists,
@@ -465,13 +489,18 @@ module.exports = function setupSoundCloud({
     };
     const results = await Promise.allSettled(sources.map(relatedStrict));
     let candidates = results.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
-    let selected = selectDiverse(ranked(candidates), {
-      seedArtists: station.seedArtists,
-      seedOwners: station.seedOwners,
-      seenIds: station.seenIds,
-      seenIdentities: station.seenIdentities,
-      recentArtists,
-    });
+    let selected = selectDiverse(
+      station.mode === 'artist'
+        ? ranked(candidates)
+        : await languageDiscovery.order(ranked(candidates)),
+      {
+        seedArtists: station.seedArtists,
+        seedOwners: station.seedOwners,
+        seenIds: station.seenIds,
+        seenIdentities: station.seenIdentities,
+        recentArtists,
+      }
+    );
     // Widen only through SoundCloud's relationship graph, never an unrelated library artist.
     if (selected.length < 4) {
       const extra = station.anchors[station.cursor++ % station.anchors.length];
@@ -486,13 +515,18 @@ module.exports = function setupSoundCloud({
           candidates.push(...(await relatedStrict(bridge)));
         } catch {}
       }
-      selected = selectDiverse(ranked(candidates), {
-        seedArtists: station.seedArtists,
-        seedOwners: station.seedOwners,
-        seenIds: station.seenIds,
-        seenIdentities: station.seenIdentities,
-        recentArtists,
-      });
+      selected = selectDiverse(
+        station.mode === 'artist'
+          ? ranked(candidates)
+          : await languageDiscovery.order(ranked(candidates)),
+        {
+          seedArtists: station.seedArtists,
+          seedOwners: station.seedOwners,
+          seenIds: station.seenIds,
+          seenIdentities: station.seenIdentities,
+          recentArtists,
+        }
+      );
     }
     if (!selected.length) {
       const error = results.find((r) => r.status === 'rejected');
@@ -542,7 +576,7 @@ module.exports = function setupSoundCloud({
     else {
       station.seedArtists = [];
       station.seedOwners = [];
-      selected = selectDiverse(matches, { limit: 12 });
+      selected = selectDiverse(await languageDiscovery.order(matches), { limit: 12 });
       for (const t of selected) {
         station.seenIds.add(t.id);
         station.seenIdentities.add(identity(t));
@@ -905,6 +939,28 @@ module.exports = function setupSoundCloud({
       });
     return favoriteWrites;
   }
+  require('./soundcloud-import.cjs')({
+    ipcMain,
+    getWindow,
+    readLikes: (url, options) => fast.likes(url, options),
+    getFavorites: () => savedFavorites,
+    getLibrary,
+    readFavoriteIds: async () => {
+      try {
+        return (
+          JSON.parse(
+            await fs.readFile(path.join(app.getPath('userData'), 'ui-preferences.json'), 'utf8')
+          ).favoriteIds || []
+        );
+      } catch {
+        return [];
+      }
+    },
+    isExcluded,
+    register,
+    persist: persistFavorites,
+    onAdd: (id) => favoriteRevisions.set(id, (favoriteRevisions.get(id) || 0) + 1),
+  });
   ipcMain.handle('sc-favorite-set', async (_, id, liked) => {
     await initial;
     if (typeof id !== 'string' || !/^sc-[a-zA-Z0-9:-]+$/.test(id) || typeof liked !== 'boolean')
@@ -1042,51 +1098,11 @@ module.exports = function setupSoundCloud({
     return status();
   });
   async function randomTracks(excluded = []) {
-    const skip = new Set(
-      Array.isArray(excluded) ? excluded.filter((id) => typeof id === 'string').slice(-50000) : []
-    );
     await initial;
-    const genres = [
-      'rap',
-      'electronic',
-      'rock',
-      'pop',
-      'jazz',
-      'ambient',
-      'techno',
-      'phonk',
-      'metal',
-      'alternative rock',
-    ];
-    for (let i = genres.length - 1; i > 0; i--) {
-      const j = crypto.randomInt(i + 1);
-      [genres[i], genres[j]] = [genres[j], genres[i]];
-    }
-    const shuffled = genres.slice(0, 2);
-    const batches = await Promise.allSettled(
-      shuffled.map((query) => discoveryPage({ mode: 'genre', query }, crypto.randomInt(4) * 50))
-    );
-    let pool = [
-      ...new Map(
-        batches
-          .flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
-          .filter((t) => !t.playbackUnavailable && !skip.has(t.id))
-          .map((t) => [t.id, t])
-      ).values(),
-    ];
-    if (!pool.length) {
-      try {
-        pool = await discoveryPage({ mode: 'genre', query: shuffled[0] }, 0);
-      } catch {}
-    }
-    pool = pool.filter((t) => !skip.has(t.id) && !t.playbackUnavailable);
-    if (!pool.length)
-      throw Error('Не удалось загрузить случайные треки SoundCloud. Попробуй обновить подборку.');
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = crypto.randomInt(i + 1);
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-    }
-    return pool.slice(0, 6);
+    const skip = Array.isArray(excluded)
+      ? excluded.filter((id) => typeof id === 'string').slice(-50000)
+      : [];
+    return languageDiscovery.random(skip);
   }
   ipcMain.handle('sc-random', (_, excluded) => randomTracks(excluded));
   ipcMain.handle('sc-history', async () => {
@@ -1112,6 +1128,8 @@ module.exports = function setupSoundCloud({
       'pageUrl',
       'genre',
       'tags',
+      'description',
+      'language',
       'uploader',
       'publisherArtist',
       'originalTitle',
@@ -1152,6 +1170,12 @@ module.exports = function setupSoundCloud({
     for (const child of children) child.kill();
   });
   return {
+    playlistPreview: async (url) => {
+      await initial;
+      const result = await fast.playlist(url);
+      result.tracks = register(result.tracks);
+      return result;
+    },
     flush: () => Promise.allSettled([historyWrites, favoriteWrites, exclusionWrites]),
     getTrack: (id) => tracks.get(id) || savedFavorites.get(id) || historyTracks.get(id),
     handleProtocol,

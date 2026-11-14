@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' lumen: data:; style-src 'self'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SoundSync · Мини-плеер</title>
+    <link rel="stylesheet" href="mini-player.css" />
+  </head>
+  <body>
+    <header class="mini-head">
+      <span class="mini-brand"><img src="brand.svg" alt="" />SoundSync</span>
+      <div>
+        <button
+          id="mini-pin"
+          title="Поверх всех окон"
+          aria-label="Поверх всех окон"
+          aria-pressed="true"
+        >
+          ⌖</button
+        ><button id="mini-restore" title="Открыть приложение" aria-label="Открыть приложение">
+          ↗</button
+        ><button id="mini-close" title="Закрыть мини-плеер" aria-label="Закрыть мини-плеер">
+          ×
+        </button>
+      </div>
+    </header>
+    <main>
+      <div class="mini-art" id="cover"><img src="brand.svg" alt="" /></div>
+      <div class="mini-info">
+        <strong id="title">Пока тихо</strong><span id="artist">Выбери трек в библиотеке</span>
+        <div class="mini-controls">
+          <button id="previous" aria-label="Предыдущий трек" title="Предыдущий трек">◀</button
+          ><button id="play" class="mini-play" aria-label="Воспроизвести" title="Воспроизвести">
+            ▶</button
+          ><button id="next" aria-label="Следующий трек" title="Следующий трек">▶</button
+          ><button
+            id="favorite"
+            class="mini-like"
+            aria-label="Добавить в любимое"
+            title="Добавить в любимое"
+          >
+            ♡
+          </button>
+          <div class="mini-volume">
+            <button id="mute" aria-label="Выключить звук" title="Выключить звук"></button
+            ><input
+              id="volume"
+              type="range"
+              min="0"
+              max="1"
+              step=".01"
+              value=".7"
+              aria-label="Громкость"
+            />
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <span id="elapsed">0:00</span
+      ><input
+        id="seek"
+        type="range"
+        min="0"
+        max="1"
+        step=".001"
+        value="0"
+        aria-label="Позиция воспроизведения"
+      /><span id="duration">0:00</span>
+    </footer>
+    <script src="mini-player-ui.js"></script>
+  </body>
+</html>

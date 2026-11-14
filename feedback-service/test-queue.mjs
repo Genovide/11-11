@@ -1,0 +1,111 @@
+import assert from 'node:assert/strict';
+import { DatabaseSync } from 'node:sqlite';
+import { createService } from './worker.js';
+import { webhookSecret } from './queue.js';
+const sqlite = new DatabaseSync(':memory:');
+const db = {
+  exec: async (sql) => sqlite.exec(sql),
+  prepare(sql) {
+    let args = [];
+    return {
+      bind(...values) {
+        args = values;
+        return this;
+      },
+      run: async () => sqlite.prepare(sql).run(...args),
+      all: async () => ({ results: sqlite.prepare(sql).all(...args) }),
+      first: async (key) => {
+        const r = sqlite.prepare(sql).get(...args);
+        return key ? (r?.[key] ?? null) : (r ?? null);
+      },
+    };
+  },
+};
+const env = { DB: db, TELEGRAM_BOT_TOKEN: 'fake', PAIRING_CODE: 'claim-test-123' },
+  calls = [];
+let fail = false,
+  duringSend;
+const service = createService(async (url, options) => {
+  if (fail) return Response.json({ ok: false }, { status: 500 });
+  calls.push({
+    method: url.split('/').pop(),
+    body:
+      options.body instanceof FormData
+        ? Object.fromEntries(options.body)
+        : JSON.parse(options.body),
+  });
+  if (duringSend) {
+    const fn = duringSend;
+    duringSend = null;
+    await fn();
+  }
+  return Response.json({ ok: true, result: true });
+});
+const payload = (n) => ({
+  id: 'test-request-12345678-' + n,
+  type: 'bug',
+  title: 'Ошибка ' + n,
+  message: 'Ничего не происходит после нажатия кнопки.',
+});
+const submit = (n, ip = 'client-' + n) =>
+  service.fetch(
+    new Request('https://feedback.test/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': ip },
+      body: JSON.stringify(payload(n)),
+    }),
+    env
+  );
+const secret = await webhookSecret(env.TELEGRAM_BOT_TOKEN);
+const bot = (text, id = 111, key = secret) =>
+  service.fetch(
+    new Request('https://feedback.test/telegram', {
+      method: 'POST',
+      headers: { 'X-Telegram-Bot-Api-Secret-Token': key },
+      body: JSON.stringify({ message: { chat: { id, type: 'private' }, from: { id }, text } }),
+    }),
+    env
+  );
+assert.equal((await submit(1)).status, 200);
+assert.equal(calls.length, 0, 'New feedback must not notify');
+await submit(1);
+assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM feedback').get().n, 1, 'Persistent dedupe');
+assert.equal((await bot('/review', 111, 'wrong')).status, 403);
+await bot('/review', 222);
+assert.equal(calls.length, 0, 'Strangers cannot read');
+await bot('/start ' + env.PAIRING_CODE);
+assert.equal(calls[0].body.reply_markup.keyboard[0][0].text, 'Рассмотреть обращения');
+calls.length = 0;
+duringSend = () => submit(2);
+await bot('Рассмотреть обращения');
+assert.equal(
+  sqlite.prepare('SELECT reviewed FROM feedback WHERE id=?').get(payload(1).id).reviewed > 0,
+  true
+);
+assert.equal(
+  sqlite.prepare('SELECT reviewed FROM feedback WHERE id=?').get(payload(2).id).reviewed,
+  0,
+  'Later feedback stays pending'
+);
+calls.length = 0;
+fail = true;
+assert.equal((await bot('/review')).status, 503);
+assert.equal(
+  sqlite.prepare('SELECT reviewed FROM feedback WHERE id=?').get(payload(2).id).reviewed,
+  0,
+  'Delivery failure must retain feedback'
+);
+fail = false;
+await bot('/review');
+assert.ok(calls.some((c) => c.body.text?.includes('Ошибка 2')));
+for (let i = 3; i < 8; i++) await submit(i);
+calls.length = 0;
+await bot('/review');
+assert.ok(calls.some((c) => c.method === 'sendDocument'));
+assert.equal(sqlite.prepare('SELECT COUNT(*) n FROM feedback WHERE reviewed=0').get().n, 0);
+calls.length = 0;
+await bot('/review');
+assert.equal(calls[0].body.text, 'Новых обращений пока нет.');
+console.log(
+  'PASS queue: durable SQL dedupe, silent intake, owner pairing, webhook authentication, snapshot boundary, retained failures, grouped delivery, no repeated reviews'
+);

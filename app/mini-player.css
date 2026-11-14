@@ -1,0 +1,297 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: #eef2ed;
+  background: #111719;
+  font:
+    12px 'Segoe UI',
+    sans-serif;
+  overflow: hidden;
+  border: 1px solid #ffffff16;
+  border-radius: 12px;
+  height: 100vh;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  border: 0;
+  background: none;
+  color: #a7b3aa;
+  cursor: pointer;
+  border-radius: 6px;
+}
+button:hover {
+  color: #ffdc29;
+  background: #ffffff09;
+}
+button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #ffdc29;
+  outline-offset: 2px;
+}
+.mini-head {
+  height: 36px;
+  padding: 0 12px 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  -webkit-app-region: drag;
+}
+.mini-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  color: #a9b6ad;
+}
+.mini-brand img {
+  width: 21px;
+  height: 16px;
+}
+.mini-head > div {
+  display: flex;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+.mini-head button {
+  width: 27px;
+  height: 25px;
+  font-size: 18px;
+}
+.mini-head button[aria-pressed='true'] {
+  color: #ffdc29;
+}
+main {
+  display: flex;
+  gap: 14px;
+  padding: 5px 16px 0;
+  min-width: 0;
+}
+.mini-art {
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #252b20;
+}
+.mini-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mini-art:not(.has-cover) img {
+  width: 48px;
+  height: 36px;
+  object-fit: contain;
+}
+.mini-info {
+  min-width: 0;
+  flex: 1;
+}
+.mini-info strong,
+.mini-info > span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mini-info strong {
+  font-weight: 650;
+  font-size: 14px;
+  line-height: 1.4;
+  padding-top: 1px;
+}
+.mini-info > span {
+  font-size: 11px;
+  color: #87978d;
+  margin-top: 3px;
+}
+.mini-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 10px;
+}
+.mini-controls button {
+  width: 25px;
+  height: 26px;
+  font-size: 12px;
+}
+.mini-controls .mini-play {
+  width: 31px;
+  height: 31px;
+  background: #ffdc29;
+  color: #191c0d;
+  border-radius: 50%;
+  font-size: 13px;
+}
+.mini-controls .mini-like {
+  margin-left: 1px;
+  font-size: 21px;
+}
+.mini-like.liked {
+  color: #ffdc29;
+}
+.mini-volume {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  color: #8a998f;
+}
+.mini-volume input {
+  width: 48px;
+}
+input[type='range'] {
+  height: 3px;
+  accent-color: #ffdc29;
+  cursor: pointer;
+}
+footer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 20px 16px 12px;
+  font-size: 9px;
+  color: #82958a;
+}
+footer input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+footer span {
+  min-width: 25px;
+}
+footer span:last-child {
+  text-align: right;
+}
+button {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.15s;
+}
+button svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+  pointer-events: none;
+}
+button:not(:disabled):active {
+  transform: scale(0.92);
+}
+.mini-head > div {
+  gap: 3px;
+}
+.mini-head button {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}
+.mini-head button svg {
+  width: 14px;
+  height: 14px;
+}
+.mini-head #mini-pin[aria-pressed='true'] {
+  background: #ffdc2910;
+}
+.mini-head #mini-close:hover {
+  background: #df53532a;
+  color: #ff8a8a;
+}
+.mini-controls {
+  gap: 7px;
+  margin-top: 9px;
+}
+.mini-controls button {
+  width: 28px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+}
+.mini-controls button svg {
+  width: 18px;
+  height: 18px;
+}
+.mini-controls .mini-play {
+  width: 34px;
+  height: 34px;
+  background: #ffdc29;
+  box-shadow: 0 3px 12px #ffdc2917;
+}
+.mini-controls .mini-play:hover {
+  background: #ffe773;
+  box-shadow: 0 3px 16px #ffdc2930;
+}
+.mini-controls .mini-play svg {
+  width: 19px;
+  height: 19px;
+}
+.mini-controls .mini-like {
+  margin-left: 0;
+}
+.mini-volume {
+  gap: 3px;
+  margin-left: auto;
+}
+.mini-controls .mini-volume button {
+  width: 22px;
+  height: 28px;
+}
+.mini-volume button svg {
+  width: 16px;
+  height: 16px;
+}
+.mini-volume input {
+  width: 43px;
+}
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  margin: 0;
+  border-radius: 4px;
+  background: linear-gradient(to right, #ffdc29 0 var(--fill, 0%), #34413b var(--fill, 0%) 100%);
+  outline: none;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 0;
+  background: #ffdc29;
+  box-shadow: 0 0 0 2px #111719;
+  transition: box-shadow 0.15s;
+}
+input[type='range']:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px #ffdc2920;
+}
+input[type='range']:disabled {
+  opacity: 0.35;
+}
+footer {
+  padding-top: 17px;
+}
+@media (prefers-reduced-motion: reduce) {
+  button,
+  input[type='range']::-webkit-slider-thumb {
+    transition: none;
+  }
+}

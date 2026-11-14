@@ -97,7 +97,9 @@ app.on('before-quit', (event) => {
   if (!quitting) {
     event.preventDefault();
     quitting = true;
-    Promise.allSettled([uiThemeWrites, soundcloud?.flush?.()]).finally(() => app.quit());
+    Promise.allSettled([uiThemeWrites, soundcloud?.flush?.(), trackCards?.flush?.()]).finally(() =>
+      app.quit()
+    );
   }
 });
 app.on('activate', () => {
@@ -117,13 +119,14 @@ protocol.registerSchemesAsPrivileged([
     },
   },
 ]);
-let soundcloud, alignmentEngine, lyricsStore, libraryMetadata;
+let soundcloud, alignmentEngine, lyricsStore, libraryMetadata, trackCards;
 let win,
   library = { folder: '', tracks: [] },
   allowed = new Map(),
   scanBusy = false;
 const smoke = false;
 function allow() {
+  if (trackCards) library.tracks.forEach(trackCards.restore);
   allowed = new Map();
   for (const t of library.tracks) {
     allowed.set(t.id, t.path);
@@ -133,6 +136,7 @@ function allow() {
 const dataFile = () => path.join(app.getPath('userData'), 'library.json');
 let saveQueue = Promise.resolve();
 async function save() {
+  if (trackCards) library.tracks.forEach(trackCards.restore);
   const snapshot = JSON.stringify(library);
   saveQueue = saveQueue
     .catch(() => {})
@@ -313,6 +317,18 @@ async function scan(folder) {
 app
   .whenReady()
   .then(async () => {
+    trackCards = require('./track-card.cjs')({
+      app,
+      ipcMain,
+      dialog,
+      nativeImage: require('electron').nativeImage,
+      getWindow: () => win,
+      getLibrary: () => library,
+      getRemoteTrack: (id) => soundcloud?.getTrack(id),
+      save,
+      refreshAllowed: allow,
+    });
+    await trackCards.ready;
     libraryMetadata = require('./lyrics-metadata.cjs')({
       app,
       ipcMain,
@@ -361,8 +377,24 @@ app
       save,
       refreshAllowed: allow,
       readTrack: readLocalTrack,
+      applyTrackCard: trackCards.restore,
       isAligning: (id) => scanBusy || alignmentEngine.isAligning(id),
       send: (channel, data) => win?.webContents.send(channel, data),
+    });
+    require('./playlists.cjs')({
+      app,
+      ipcMain,
+      getWindow: () => win,
+      getLibrary: () => library,
+      getRemoteTrack: (id) => soundcloud.getTrack(id),
+      registerRemote: (items) => soundcloud.register(items),
+      readRemotePlaylist: (url) => soundcloud.playlistPreview(url),
+    });
+    require('./feedback.cjs')({
+      ipcMain,
+      shell: require('electron').shell,
+      getWindow: () => win,
+      version: require('./package.json').version,
     });
     require('./song-insight.cjs')({
       app,
@@ -379,6 +411,7 @@ app
       register: (id, file) => allowed.set(id, file),
     });
     protocol.handle('lumen', async (request) => {
+      if (new URL(request.url).hostname === 'track-cover') return trackCards.cover(request);
       if (new URL(request.url).hostname.startsWith('sc-'))
         return soundcloud.handleProtocol(request);
       const p = allowed.get(new URL(request.url).pathname.slice(1));
@@ -462,6 +495,13 @@ app
         nodeIntegration: false,
         sandbox: true,
       },
+    });
+    require('./mini-player.cjs')({
+      app,
+      BrowserWindow,
+      ipcMain,
+      screen: require('electron').screen,
+      getWindow: () => win,
     });
     if (smoke)
       win.webContents.on('console-message', (...args) =>
