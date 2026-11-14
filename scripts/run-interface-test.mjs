@@ -97,7 +97,8 @@ try {
   for (let i = 0; i < 100; i++) {
     try {
       const pages = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json();
-      if (pages.some((p) => p.type === 'page' && p.url.endsWith('index.html'))) {
+      // Адрес может нести параметры (?nosplash=1 в тестовом режиме), поэтому сравниваем только путь.
+      if (pages.some((p) => p.type === 'page' && new URL(p.url).pathname.endsWith('/index.html'))) {
         ready = true;
         break;
       }
