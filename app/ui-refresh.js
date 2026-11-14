@@ -159,6 +159,28 @@
       miniCover.classList.add('cover-swap');
     }).observe(miniCover, { childList: true });
 
+  // Блок трека в правой панели: помечаем, когда он прокручивается, чтобы показать затухание.
+  const summary = document.querySelector('.now-panel > .now-summary');
+  if (summary) {
+    const markScroll = () => {
+      const scrollable = summary.scrollHeight > summary.clientHeight + 2;
+      summary.classList.toggle('scrollable', scrollable);
+      summary.classList.toggle(
+        'at-end',
+        summary.scrollTop + summary.clientHeight >= summary.scrollHeight - 2
+      );
+    };
+    summary.addEventListener('scroll', markScroll, { passive: true });
+    new ResizeObserver(markScroll).observe(summary);
+    new MutationObserver(markScroll).observe(summary, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    markScroll();
+  }
+
   // ——— Обложки для треков без обложки ———
   // Своя градиентная обложка на альбом (или трек): одинаковая при каждом показе, с первой буквой.
   const COVER_PALETTES = [
@@ -507,7 +529,6 @@
     const row = node('div', 'keys-row'),
       combo = node('span', 'keys-combo');
     for (const k of keys) combo.append(node('kbd', '', k));
-    combo.append(node('kbd', '', k));
     row.append(combo, node('span', 'keys-label', label));
     keysList.append(row);
   }

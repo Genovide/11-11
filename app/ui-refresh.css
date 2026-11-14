@@ -470,14 +470,26 @@ body.effects-off.is-playing .transport-buttons .play-button {
   height: 30px;
 }
 
-/* Правая панель: блок трека получает естественную высоту, сжимается только текст песни.
-   Раньше кнопки «Текст» и «Синхронизация» уезжали под переключатель «Текст песни / Очередь». */
+/* Правая панель. Высота панели ограничена окном, поэтому блок трека может прокручиваться,
+   но теперь это видно: тонкая полоса и затухание снизу. Обложка меньше на невысоких окнах,
+   чтобы кнопки «Текст» и «Синхронизация» помещались без прокрутки. */
 body > .now-panel {
-  grid-template-rows: auto auto minmax(110px, 1fr) !important;
+  grid-template-rows: minmax(0, auto) auto minmax(110px, 1fr) !important;
 }
 body > .now-panel > .now-summary {
-  overflow: visible;
-  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff30 transparent;
+}
+body > .now-panel > .now-summary::-webkit-scrollbar {
+  width: 6px !important;
+}
+body > .now-panel > .now-summary::-webkit-scrollbar-thumb {
+  background: #ffffff2a;
+  border-radius: 6px;
+}
+body > .now-panel > .now-summary.scrollable:not(.at-end) {
+  mask-image: linear-gradient(#000 calc(100% - 36px), transparent);
 }
 .now-summary .now-cover {
   width: min(100%, 25vh) !important;
@@ -490,10 +502,27 @@ body > .now-panel > .now-summary {
   font-size: 11.5px;
   line-height: 1.35;
 }
-@media (max-height: 760px) {
+@media (max-height: 1000px) {
   .now-summary .now-cover {
-    width: min(100%, 20vh) !important;
+    width: min(100%, 19vh) !important;
   }
+}
+@media (max-height: 780px) {
+  .now-summary .now-cover {
+    width: min(100%, 14vh) !important;
+  }
+}
+
+/* Кнопка шпаргалки — справа, рядом с «Обратной связью». */
+.titlebar > .keys-open {
+  margin-left: auto;
+}
+.titlebar > .keys-open + .feedback-open {
+  margin-left: 0;
+}
+.lyrics-offset .lyrics-offset-value,
+.lyrics-offset-label {
+  white-space: nowrap;
 }
 
 /* Сгенерированные обложки: градиент по альбому, мягкий блик, кольца и буква. */

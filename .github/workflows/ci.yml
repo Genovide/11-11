@@ -1,0 +1,52 @@
+name: Checks
+# Быстрые проверки на каждый PR и push в main: стиль, линтер, тесты исходников и PWA.
+# Сборка и проверка установщиков на настоящих Windows/Mac — в test-upgrade.yml при релизе.
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install tools
+        run: npm ci
+      - name: Formatting
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      - name: Source tests
+        run: |
+          node scripts/check-source.cjs
+          node scripts/test-cover-palette.cjs
+          node scripts/test-track-card.cjs
+          node scripts/test-feedback.cjs
+          node scripts/test-playlists.cjs
+          node scripts/test-recommendation-language.cjs
+          node scripts/test-soundcloud-import.cjs
+          node scripts/test-lyrics-timing.cjs
+          node scripts/test-taste-model.cjs
+          python -I scripts/test-timing-refinement.py
+      - name: Installer scripts parse
+        run: |
+          bash -n scripts/Upgrade-SoundSync.command
+          bash -n scripts/Update-SoundSync.command
+      - name: Pocket PWA
+        working-directory: pwa
+        run: |
+          npm run build
+          npm test
