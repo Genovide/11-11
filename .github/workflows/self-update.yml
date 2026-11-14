@@ -1,0 +1,92 @@
+name: Self-update
+# Проверка самообновления на настоящих Windows и Mac: передатчик из app/self-update ждёт
+# закрытия плеера, ставит апдейт из этой ветки поверх полной 1.2.0 и пишет результат.
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - app/self-update/**
+      - app/updates.cjs
+      - scripts/Upgrade-SoundSync.*
+      - scripts/build-upgrades.mjs
+      - .github/workflows/self-update.yml
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build the Windows update from this branch
+        shell: powershell
+        env:
+          SOUNDSYNC_PYTHON: python
+          SOUNDSYNC_UPDATE_PLATFORM: Windows
+        run: |
+          node scripts/build-upgrades.mjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Prepare the released 1.2.0 base
+        shell: powershell
+        run: |
+          curl.exe --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-Windows-x64.zip
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          if ((Get-FileHash base.zip).Hash.ToLowerInvariant() -ne '049857d0ec726d2112bc5156da8ba92ca50eb2dbd593b8e38360ebafb844081f') { throw 'Base checksum mismatch' }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          [IO.Compression.ZipFile]::ExtractToDirectory((Join-Path $pwd 'base.zip'), (Join-Path $pwd 'work/base'))
+      - name: Hand-off installs the update after the player exits
+        shell: powershell
+        run: |
+          $version = (Get-Content app/package.json -Raw | ConvertFrom-Json).version
+          $zip = (Resolve-Path "dist/SoundSync-$version-Update-Windows-x64.zip").Path
+          $root = (Resolve-Path 'work/base/SoundSync').Path
+          $state = Join-Path $pwd 'work/state'
+          # Короткий процесс изображает закрывающийся плеер.
+          $player = Start-Process powershell -ArgumentList '-NoProfile', '-Command', 'Start-Sleep -Seconds 3' -PassThru -WindowStyle Hidden
+          $env:SOUNDSYNC_NO_RELAUNCH = '1'
+          powershell -NoProfile -ExecutionPolicy Bypass -File app/self-update/install-windows.ps1 -ProcessId $player.Id -Zip $zip -Root $root -State $state -Version "v$version"
+          Get-Content (Join-Path $state 'install.log') -ErrorAction SilentlyContinue | Select-Object -Last 15
+          $result = Get-Content (Join-Path $state 'result.json') -Raw | ConvertFrom-Json
+          if (-not $result.ok) { throw 'Self-update reported failure' }
+          $installed = (Get-Content (Join-Path $root 'resources/app/package.json') -Raw | ConvertFrom-Json).version
+          if ($installed -ne $version) { throw "Installed $installed, expected $version" }
+          if (Test-Path -LiteralPath $zip) { throw 'Downloaded archive should be removed after success' }
+          Write-Host "Self-update installed $installed"
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the Mac update from this branch
+        env:
+          SOUNDSYNC_PYTHON: python3
+          SOUNDSYNC_UPDATE_PLATFORM: macOS
+        run: node scripts/build-upgrades.mjs
+      - name: Prepare the released 1.2.0 base
+        run: |
+          curl --fail --location --retry 3 -o base.zip https://github.com/Genovide/SoundSync/releases/download/v1.2.0/SoundSync-1.2.0-macOS-arm64.zip
+          echo 'e9af35535b3fef181ae8af9ba3419cdd37eda49b1d8b7877eddb55c308468867  base.zip' | shasum -a 256 -c -
+          mkdir -p work/base
+          ditto -x -k base.zip work/base
+      - name: Hand-off installs the update after the player exits
+        run: |
+          version=$(node -p "require('./app/package.json').version")
+          zip="$PWD/dist/SoundSync-$version-Update-macOS-arm64.zip"
+          sleep 3 & player=$!
+          SOUNDSYNC_NO_RELAUNCH=1 bash app/self-update/install-mac.sh "$player" "$zip" "$PWD/work/base/SoundSync.app" "$PWD/work/state" "v$version"
+          tail -12 work/state/install.log
+          grep -q '"ok":true' work/state/result.json
+          installed=$(node -p "require('./work/base/SoundSync.app/Contents/Resources/app/package.json').version")
+          test "$installed" = "$version"
+          test ! -e "$zip"
+          codesign --verify --deep --strict work/base/SoundSync.app
+          echo "Self-update installed $installed"

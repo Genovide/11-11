@@ -491,7 +491,7 @@
     toast = function (text) {
       toastBeforeRefresh(text);
       const problem =
-          /не удалось|ошибк|недоступ|не поддерж|не найден|нельзя|сначала|failed|error/i.test(
+          /не удалось|ошибк|недоступ|не поддерж|не установил|не найден|нельзя|сначала|failed|error/i.test(
             String(text)
           ),
         message = node('span', 'toast-text', String(text));

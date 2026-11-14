@@ -792,3 +792,43 @@ body:not(.is-playing) .track-row.playing:hover .track-number::before {
   color: #c9c6bc;
   font-size: 13.5px;
 }
+
+/* Кнопка обновления: акцент, когда есть новая версия, и прогресс загрузки внутри кнопки. */
+.update-button {
+  position: relative;
+  overflow: hidden;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+.update-button.update-available {
+  background: var(--ui-accent) !important;
+  color: #111 !important;
+  border-color: transparent !important;
+  font-weight: 700;
+  animation: ui-update-pulse 2.6s ease-in-out infinite;
+}
+.update-button.update-downloading {
+  color: #f5f3eb !important;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--ui-accent) 55%, transparent) 0 var(--progress, 0%),
+    #ffffff0a var(--progress, 0%) 100%
+  ) !important;
+  font-variant-numeric: tabular-nums;
+}
+@keyframes ui-update-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ui-accent) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--ui-accent) 18%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .update-button.update-available {
+    animation: none;
+  }
+}
